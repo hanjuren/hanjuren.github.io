@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://hanjuren.github.io/sitemap.xml

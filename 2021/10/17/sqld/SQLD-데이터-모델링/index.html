@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>SQLD 데이터 모델링 - Juryeon Blog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="Juryeon Blog"><meta name="msapplication-TileImage" content="/image/og_image.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Juryeon Blog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="데이터 모델링이란? 정보시스템을 구축하기 위한 데이터 관점의 업무 분석 기법 데이터베이스를 구축하기 위한 분석&amp;#x2F;설계의 과정  모델링 복잡하고 다향한 현상을 표기법에 의해 규칙을 가지고 표기하는 것을 의미한다. 가설적 또는 일정 양식에 맟춘 표현 어떤 것에 대한 에비표현으로 그로부터 최종대상이 구축되도록 하는 계획으로서 기여 하는 것  모델링의 특징모델링은"><meta property="og:type" content="blog"><meta property="og:title" content="SQLD 데이터 모델링"><meta property="og:url" content="http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8%EB%A7%81/"><meta property="og:site_name" content="Juryeon Blog"><meta property="og:description" content="데이터 모델링이란? 정보시스템을 구축하기 위한 데이터 관점의 업무 분석 기법 데이터베이스를 구축하기 위한 분석&amp;#x2F;설계의 과정  모델링 복잡하고 다향한 현상을 표기법에 의해 규칙을 가지고 표기하는 것을 의미한다. 가설적 또는 일정 양식에 맟춘 표현 어떤 것에 대한 에비표현으로 그로부터 최종대상이 구축되도록 하는 계획으로서 기여 하는 것  모델링의 특징모델링은"><meta property="og:locale" content="ko_KR"><meta property="og:image" content="http://hanjuren.github.io/img/og_image.png"><meta property="article:published_time" content="2021-10-17T04:27:58.000Z"><meta property="article:modified_time" content="2021-12-05T05:38:52.434Z"><meta property="article:author" content="han Ju Ryeon"><meta property="article:tag" content="SQLD"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8%EB%A7%81/"},"headline":"SQLD 데이터 모델링","image":["http://hanjuren.github.io/img/og_image.png"],"datePublished":"2021-10-17T04:27:58.000Z","dateModified":"2021-12-05T05:38:52.434Z","author":{"@type":"Person","name":"han Ju Ryeon"},"publisher":{"@type":"Organization","name":"Juryeon Blog","logo":{"@type":"ImageObject","url":"http://hanjuren.github.io/images/bloglogo.png"}},"description":"데이터 모델링이란? 정보시스템을 구축하기 위한 데이터 관점의 업무 분석 기법 데이터베이스를 구축하기 위한 분석&#x2F;설계의 과정  모델링 복잡하고 다향한 현상을 표기법에 의해 규칙을 가지고 표기하는 것을 의미한다. 가설적 또는 일정 양식에 맟춘 표현 어떤 것에 대한 에비표현으로 그로부터 최종대상이 구축되도록 하는 계획으로서 기여 하는 것  모델링의 특징모델링은"}</script><link rel="canonical" href="http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8%EB%A7%81/"><link rel="icon" href="/image/og_image.png"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script><!--!--><!--!--><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/rss2.xml" title="Juryeon Blog" type="application/rss+xml">
+</head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="카탈로그" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="검색" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-9-desktop is-9-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item"><time datetime="2021-10-17T04:27:58.000Z" title="10/17/2021, 1:27:58 PM">2021-10-17</time>&nbsp;게시 됨</span><span class="level-item"><time datetime="2021-12-05T05:38:52.434Z" title="12/5/2021, 2:38:52 PM">2021-12-05</time>&nbsp;업데이트 됨</span><span class="level-item"><a class="link-muted" href="/categories/SQLD/">SQLD</a></span></div></div><h1 class="title is-3 is-size-4-mobile">SQLD 데이터 모델링</h1><div class="content"><h3 id="데이터-모델링이란"><a href="#데이터-모델링이란" class="headerlink" title="데이터 모델링이란?"></a>데이터 모델링이란?</h3><ul>
+<li>정보시스템을 구축하기 위한 데이터 관점의 업무 분석 기법</li>
+<li>데이터베이스를 구축하기 위한 분석/설계의 과정</li>
+</ul>
+<h3 id="모델링"><a href="#모델링" class="headerlink" title="모델링"></a>모델링</h3><ul>
+<li>복잡하고 다향한 현상을 표기법에 의해 규칙을 가지고 표기하는 것을 의미한다.</li>
+<li>가설적 또는 일정 양식에 맟춘 표현</li>
+<li>어떤 것에 대한 에비표현으로 그로부터 최종대상이 구축되도록 하는 계획으로서 기여 하는 것</li>
+</ul>
+<h3 id="모델링의-특징"><a href="#모델링의-특징" class="headerlink" title="모델링의 특징"></a>모델링의 특징</h3><p>모델링은 추상화, 단순화, 명확화 3가지 특징이 있다.</p>
+<ol>
+<li>추상화는 현실세계를 일정한 형식에 맟추어 표현을 한다는 의미이다. </li>
+<li>단순화는 복잡한 현실세계를 약속된 규약에 의해 제한된 표기법, 언어로 표현하여 쉽게 이해할 수 있도록 하는 개념을 의미한다.</li>
+<li>명확화는 누구나 이해하기 쉽게 대상에 대한 애매모호함을 제거하고 정확하게 표기하는 것을 의미한다.</li>
+</ol>
+<h3 id="모델링의-세가지-관점"><a href="#모델링의-세가지-관점" class="headerlink" title="모델링의 세가지 관점"></a>모델링의 세가지 관점</h3><ol>
+<li>데이터 관점 : 업무가 어떤 데이터와 관련이 있는지 또는 데이터간의 관계는 무엇인지에 대해 모델링 하는 방법</li>
+<li>프로세스 관점 : 업무가 실제하고 있는 일은 무엇인지 또는 무엇을 해야 하는지를 모델링 하는 방법</li>
+<li>데이터와 프로세스의 상관관점 : 업무가 처리하고 있는 일의 방법에 따라 데이터는 어떻게 영향을 받고 있는지 모델링 하는 방법</li>
+</ol>
+<h3 id="데이터-모델이-제공하는-기능"><a href="#데이터-모델이-제공하는-기능" class="headerlink" title="데이터 모델이 제공하는 기능"></a>데이터 모델이 제공하는 기능</h3><ol>
+<li>시스템을 현재 또는 원하는 모습으로 가시화하도록 도와준다.</li>
+<li>시스템의 구조와 행동을 명세화 할 수 있게 한다.</li>
+<li>시슽템을 구축하는 구조화된 틀을 제공한다.</li>
+<li>시스템을 구축하는 과정에서 결정한 것을 문서화 한다.</li>
+<li>다양한 영역에 집중하기 위해 다른 영역의 세부 사항은 숨기는 다양한 관점을 제공한다.</li>
+</ol>
+<h3 id="중요성-및-유의점"><a href="#중요성-및-유의점" class="headerlink" title="중요성 및 유의점"></a>중요성 및 유의점</h3><ol>
+<li>파급효과 : 시스템 구축이 완성되어 가는 과정에서 수많은 단위 테스트가 수행되고 이러한 과정이 반복된다. 이러한 테스트 과정에서 데이터 모델이 변경되는 상황은 프로젝트의 규모가 클수록 문제가 일어난다. 이러한 이유로 데이터 설계는 중요하다.</li>
+<li>복잡한 정보 요구사항의 간결한 표현 : 데이터 모델은 정보요구사항을 파악하기 위해 유용하다. </li>
+<li>데이터 품질 : 데이터로 이용할 수 있는 비즈니스 기회를 얻기 위해 데이터는 필요한 데이터만이 존재 해야 한다.</li>
+</ol>
+<h3 id="데이터-모델링의-3단계-진행"><a href="#데이터-모델링의-3단계-진행" class="headerlink" title="데이터 모델링의 3단계 진행"></a>데이터 모델링의 3단계 진행</h3><table>
+<thead>
+<tr>
+<th>데이터 모델링</th>
+<th>내용</th>
+<th>수준</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>개념적 데이터 모델링</td>
+<td>추상화 수준이 높고 업무 중심적이며 포괄적인 수준의 모델링</td>
+<td>추상적</td>
+</tr>
+<tr>
+<td>논리적 데이터 모델링</td>
+<td>시스템으로 구축하고자 하는 업무에 대하여 key 속성 관계 등을 정확하게 표현</td>
+<td></td>
+</tr>
+<tr>
+<td>물리적 데이터 모델링</td>
+<td>실제로 데이터 베이스에 이식할 수 있도록 설계</td>
+<td>구체적</td>
+</tr>
+</tbody></table>
+</div><div class="article-licensing box"><div class="licensing-title"><p>SQLD 데이터 모델링</p><p><a href="http://hanjuren.github.io/2021/10/17/sqld/SQLD-데이터-모델링/">http://hanjuren.github.io/2021/10/17/sqld/SQLD-데이터-모델링/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>Author</h6><p>han Ju Ryeon</p></div></div><div class="level-item is-narrow"><div><h6>Posted on</h6><p>2021-10-17</p></div></div><div class="level-item is-narrow"><div><h6>Updated on</h6><p>2021-12-05</p></div></div><div class="level-item is-narrow"><div><h6>Licensed under</h6><p><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/SQLD/">SQLD</a></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2021/10/17/sqld/SQLD-%EC%A0%95%EA%B7%9C%ED%99%94/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">SQLD 정규화</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2021/10/16/sqld/SQLD-%EC%86%8D%EC%84%B1/"><span class="level-item">SQLD 속성</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">댓글</h3><div class="notification is-danger">You forgot to set the <code>shortname</code> for Disqus. Please set it in <code>_config.yml</code>.</div></div></div></div><div class="column column-left is-4-tablet is-3-desktop is-3-widescreen  order-1"><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar" src="/images/profile.png" alt="Han Ju Ryeon"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Han Ju Ryeon</p><p class="is-size-6 is-block">새로운것을 배우기 위해 노력하는 삶</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>경기도 의왕시</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">포스트</p><a href="/archives"><p class="title">48</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">카테고리</p><a href="/categories"><p class="title">17</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">태그</p><a href="/tags"><p class="title">15</p></a></div></div></nav><div class="level"><a class="level-item button is-info is-outlined is-rounded" href="/" target="_blank" rel="noopener">HOME</a></div><div class="level is-mobile is-multiline"><a class="level-item button is-transparent is-marginless" target="_blank" rel="external nofollow noopener noreferrer" title="Github" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><div class="card widget" id="toc" data-type="toc"><div class="card-content"><div class="menu"><h3 class="menu-label">카탈로그</h3><ul class="menu-list"><li><a class="level is-mobile" href="#데이터-모델링이란"><span class="level-left"><span class="level-item">1</span><span class="level-item">데이터 모델링이란?</span></span></a></li><li><a class="level is-mobile" href="#모델링"><span class="level-left"><span class="level-item">2</span><span class="level-item">모델링</span></span></a></li><li><a class="level is-mobile" href="#모델링의-특징"><span class="level-left"><span class="level-item">3</span><span class="level-item">모델링의 특징</span></span></a></li><li><a class="level is-mobile" href="#모델링의-세가지-관점"><span class="level-left"><span class="level-item">4</span><span class="level-item">모델링의 세가지 관점</span></span></a></li><li><a class="level is-mobile" href="#데이터-모델이-제공하는-기능"><span class="level-left"><span class="level-item">5</span><span class="level-item">데이터 모델이 제공하는 기능</span></span></a></li><li><a class="level is-mobile" href="#중요성-및-유의점"><span class="level-left"><span class="level-item">6</span><span class="level-item">중요성 및 유의점</span></span></a></li><li><a class="level is-mobile" href="#데이터-모델링의-3단계-진행"><span class="level-left"><span class="level-item">7</span><span class="level-item">데이터 모델링의 3단계 진행</span></span></a></li></ul></div></div><style>#toc .menu-list > li > a.is-active + .menu-list { display: block; }#toc .menu-list > li > a + .menu-list { display: none; }</style><script src="/js/toc.js" defer></script></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a><p class="is-size-7"><span>&copy; 2021 han Ju Ryeon</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="external nofollow noopener noreferrer">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("ko");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="맨 위로" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "이 웹 사이트는 귀하의 경험을 향상시키기 위해 Cookie를 사용합니다.",
+          dismiss: "무시",
+          allow: "허용",
+          deny: "거부",
+          link: "더 알아보기",
+          policy: "Cookie 정책",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="입력 하세요..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"입력 하세요...","untitled":"(제목 없음)","posts":"포스트","pages":"페이지","categories":"카테고리","tags":"태그"});
+        });</script></body></html>

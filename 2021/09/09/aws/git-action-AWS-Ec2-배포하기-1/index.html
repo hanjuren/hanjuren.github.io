@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>git action AWS Ec2 배포하기 1 - Juryeon Blog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="Juryeon Blog"><meta name="msapplication-TileImage" content="/image/og_image.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Juryeon Blog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Git Action Ec2 Codedeploy 자동배포 하기 1. git action을 통해 ec2인스턴스에 자동으로 나의 코드를 배포하는 과정을 진행할 것이다.우리의 서비스가 ec2에 배포를 진행하고 나면 우리의 서비스가 수정되고 새로운 기능이 생길 때마다 ec2에 접속해서 새로 빌드를 해야하는데 이러한 과정을 git action과 aws에서 대신 진행주"><meta property="og:type" content="blog"><meta property="og:title" content="git action AWS Ec2 배포하기 1"><meta property="og:url" content="http://hanjuren.github.io/2021/09/09/aws/git-action-AWS-Ec2-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-1/"><meta property="og:site_name" content="Juryeon Blog"><meta property="og:description" content="Git Action Ec2 Codedeploy 자동배포 하기 1. git action을 통해 ec2인스턴스에 자동으로 나의 코드를 배포하는 과정을 진행할 것이다.우리의 서비스가 ec2에 배포를 진행하고 나면 우리의 서비스가 수정되고 새로운 기능이 생길 때마다 ec2에 접속해서 새로 빌드를 해야하는데 이러한 과정을 git action과 aws에서 대신 진행주"><meta property="og:locale" content="ko_KR"><meta property="og:image" content="https://ifh.cc/g/jXcK8M.png"><meta property="og:image" content="https://ifh.cc/g/PfJzmP.png"><meta property="og:image" content="https://ifh.cc/g/1fsz3n.png"><meta property="og:image" content="https://ifh.cc/g/Pu4CP0.png"><meta property="article:published_time" content="2021-09-09T08:42:47.000Z"><meta property="article:modified_time" content="2021-12-05T05:38:52.426Z"><meta property="article:author" content="han Ju Ryeon"><meta property="article:tag" content="ec2"><meta property="article:tag" content="aws"><meta property="article:tag" content="github"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="https://ifh.cc/g/jXcK8M.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://hanjuren.github.io/2021/09/09/aws/git-action-AWS-Ec2-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-1/"},"headline":"git action AWS Ec2 배포하기 1","image":["https://ifh.cc/g/jXcK8M.png","https://ifh.cc/g/PfJzmP.png","https://ifh.cc/g/1fsz3n.png","https://ifh.cc/g/Pu4CP0.png"],"datePublished":"2021-09-09T08:42:47.000Z","dateModified":"2021-12-05T05:38:52.426Z","author":{"@type":"Person","name":"han Ju Ryeon"},"publisher":{"@type":"Organization","name":"Juryeon Blog","logo":{"@type":"ImageObject","url":"http://hanjuren.github.io/images/bloglogo.png"}},"description":"Git Action Ec2 Codedeploy 자동배포 하기 1. git action을 통해 ec2인스턴스에 자동으로 나의 코드를 배포하는 과정을 진행할 것이다.우리의 서비스가 ec2에 배포를 진행하고 나면 우리의 서비스가 수정되고 새로운 기능이 생길 때마다 ec2에 접속해서 새로 빌드를 해야하는데 이러한 과정을 git action과 aws에서 대신 진행주"}</script><link rel="canonical" href="http://hanjuren.github.io/2021/09/09/aws/git-action-AWS-Ec2-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-1/"><link rel="icon" href="/image/og_image.png"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script><!--!--><!--!--><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/rss2.xml" title="Juryeon Blog" type="application/rss+xml">
+</head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="카탈로그" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="검색" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-9-desktop is-9-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item"><time datetime="2021-09-09T08:42:47.000Z" title="9/9/2021, 5:42:47 PM">2021-09-09</time>&nbsp;게시 됨</span><span class="level-item"><time datetime="2021-12-05T05:38:52.426Z" title="12/5/2021, 2:38:52 PM">2021-12-05</time>&nbsp;업데이트 됨</span><span class="level-item"><a class="link-muted" href="/categories/aws/">aws</a><span> / </span><a class="link-muted" href="/categories/ec2/">ec2</a><span> / </span><a class="link-muted" href="/categories/github/">github</a></span></div></div><h1 class="title is-3 is-size-4-mobile">git action AWS Ec2 배포하기 1</h1><div class="content"><h2 id="Git-Action-Ec2-Codedeploy-자동배포-하기-1"><a href="#Git-Action-Ec2-Codedeploy-자동배포-하기-1" class="headerlink" title="Git Action Ec2 Codedeploy 자동배포 하기 1."></a>Git Action Ec2 Codedeploy 자동배포 하기 1.</h2>
+<p>git action을 통해 ec2인스턴스에 자동으로 나의 코드를 배포하는 과정을 진행할 것이다.<br>우리의 서비스가 ec2에 배포를 진행하고 나면 우리의 서비스가 수정되고 새로운 기능이 생길 때마다 ec2에 접속해서 새로 빌드를 해야하는데 이러한 과정을 git action과 aws에서 대신 진행주는 서비스가 있다.</p>
+<p>해당 과정은 개발중이거나 개발된 깃 레파지토리, Ec2인스턴스, Codedeploy, IAM Role, IAM User, S3버킷을 통해 이뤄지며 해당 과정을 순서대로 정리한 글이다.</p>
+<p>먼저 개발중인 레파지토리를 이용할 것이며 각자의 프로젝트를 이용하거나 테스트 앱을 클론하여 진행해도 무방하다. </p>
+<p>배포할 앱은 Node.js 기반의 서비스이고 mysql 데이터베이스를 사용할 예정이다.</p>
+<span id="more"></span>
+<h2 id="과정"><a href="#과정" class="headerlink" title="과정"></a>과정</h2>
+<ol>
+<li>aws 인스턴스 생성</li>
+<li>인스턴스 접속 후 codedeploy agent 설치 및 node.js mysql 설치</li>
+<li>iam 역할 생성 및 유저 생성</li>
+<li>codedepoly app생성 및 배포그룹 생성</li>
+<li>git 워크플로우 작성</li>
+<li>셸 스크립트 작성</li>
+</ol>
+<p>다음의 과정을 하나씩 포스팅을 통해 진행 하도록 해보자.</p>
+<hr>
+<h3 id="Ec2-Codedeploy-Agent-설치"><a href="#Ec2-Codedeploy-Agent-설치" class="headerlink" title="Ec2 Codedeploy Agent 설치"></a>Ec2 Codedeploy Agent 설치</h3>
+<p>인스턴스 생성은 기존의 인스턴스 생성 포스팅을 참고하여 생성해도 무방하다. 인스턴스 생성 후의 자동배포를 위한 패키지들을 설치하고 기본 설정을 진행한다.</p>
+<p>인스턴스 접속 후 명령어들을 차례대로 실행한다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo yum update</span><br><span class="line">sudo yum install ruby</span><br><span class="line">sudo yum install wget</span><br><span class="line">cd /home/ec2-user</span><br><span class="line">wget https://aws-codedeploy-ap-northeast-2.s3.amazonaws.com/latest/install</span><br><span class="line">chmod +x ./install</span><br><span class="line">sudo ./install auto</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+<p>리눅스 패키지 업데이트를 진행해주고 ruby, wget 패키지를 install해준다. 이후 codedeploy agent를 설치해주면 된다.</p>
+<p>설치를 마치고 인스턴스에서 codedeploy가 정상적으로 실행 중인지 보기 위해서는 다음의 명령어를 통해 확인이 가능하다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo service codedeploy-agent status</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+
+<p><img src="https://ifh.cc/g/jXcK8M.png"><br></p>
+<p>“The AWS CodeDeploy agent is running as PID 4323”과 같은 메지지가 출력된다면 성공적으로 설치가 된것이다. 우리가 설치한것을 통해 인스턴스가 자동으로 코드 배포가 진행 되도록 해줄 것이다.</p>
+<h3 id="NodeJS-설치"><a href="#NodeJS-설치" class="headerlink" title="NodeJS 설치"></a>NodeJS 설치</h3>
+<p>node.js 환경의 프로젝트를 인스턴스를 통해 배포하기 위해서는 인스턴스 서버내에 node.js를 설치해 주어야 한다.</p>
+<p>루트로 설치하기 위해서는 root로 사용자전환을 해야하는데 처음 인스턴스를 생성시 root 패스워드를 설정해주지 않았기 때문에 “sudo passwd” 명령어를 통해 비밀번호를 설정해준다.</p>
+<p>비밀번호 설정 후 root사용자로 전환하면 된다. 사용자 전환 명령어는 su 사용자이름 으로 root전환시에는 su 만 입력해줘도 전환이 된다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash</span><br><span class="line">. ~/.nvm/nvm.sh</span><br><span class="line">nvm install node -&gt; 최신 버전 설치</span><br><span class="line">node -v</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+<p>설치 이후 node -v 명령어를 통해 노드의 버전을 확인해보고 설치가 되었는지 확인 할 수 있다.</p>
+<p><img src="https://ifh.cc/g/PfJzmP.png" title="노드 설치"><br></p>
+<h3 id="MySQL-설치"><a href="#MySQL-설치" class="headerlink" title="MySQL 설치"></a>MySQL 설치</h3>
+<p>프로젝트에서 사용하는 데이터베이스는 mysql이므로 동일하게 리눅스 환경에도 mysql을 설치해주어야 한다. mysql을 설치하는 과정은 다음과 같다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo yum install https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm</span><br><span class="line"></span><br><span class="line">sudo yum install mysql-community-server</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+<p>두가지 과정으로 mysql 서버를 다운받고 실행을 통해 상태를 확인해주면 돤다. 실행과 상태 확인 명령어는 다음과 같다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br><span class="line">2</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo systemctl start mysqld</span><br><span class="line">sudo systemctl status mysqld</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+<p>명령어를 실행하고 정상적으로 설치 실행이 되고있다면 다음과 같은 화면이 나올 것이다.</p>
+<p><img src="https://ifh.cc/g/1fsz3n.png" title="mysql실행중"><br></p>
+<p>추가적으로 데이터베이스의 기본 설정과 포트번호 확인은 mysql명령어나 mysql의 파일이 있는 디렉토리에서 추가적으로 확인이 가능하고 수정이 가능하다. 이때 수정은 root권한으로만 수정이 되니 유저에게 권한을 부여하거나 root사용자로 수정을 해주면 될듯 하다.</p>
+<h4 id="MySQL-접속"><a href="#MySQL-접속" class="headerlink" title="MySQL 접속"></a>MySQL 접속</h4>
+<p>mysql에 접속하는 과정은 다른 OS에서 접속하는 것과 똑같이 진행된다. 다만 리눅스는 GUI환경을 제공하지 않기때문에 터미널로 접속을 하면 된다.<br>먼저 mysql의 root유저의 비밀번호을 자신이 원하는 비밀번호로 수정하고 접속을 해야한다. 초기 비밀번호는 설치시 로그 파일 어딘가 남아있는데 다음 명령어를 통해 초기 비밀번호를 찾아준다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo grep &#x27;temporary password&#x27; /var/log/mysqld.log</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+
+<p>로그파일에서 비밀번호를 찾아보면 화면에 다믕과 같이 표시가 된다.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">2021-08-28T04:03:24.500883Z 6 [Note] [MY-010454] [Server] A temporary password is generated for root@localhost: VnWiZOKof1+g</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+<p>나에게 부여된 임시 패스워드는 VnWiZOKof1+g 이부분이며 요것을 가지고 새로운 비밀번호를 생성 해주면된다.<br>비밀번호를 새롭게 세팅해보도록 하자.</p>
+<figure class="highlight shell">
+<table>
+<tr>
+<td class="gutter">
+  <pre><span class="line">1</span><br></pre>
+</td>
+<td class="code">
+  <pre><span class="line">sudo mysql_secure_installation -p&#x27;VnWiZOKof1+g&#x27;</span><br></pre>
+</td>
+</tr>
+</table>
+</figure>
+
+<p>이렇게 명령어를 입력하면 새로운 비밀번호를 생성하라는 문구가 나오고 원하는 비밀번호를 입력해주면 된다.</p>
+<p>이후 mysql에 정상적으로 비밀번호를 입력하여 접속할 수 있다.</p>
+<p><img src="https://ifh.cc/g/Pu4CP0.png" title="접속완료"><br></p>
+<p>성공적으로 Ec2 인스턴스에 Codedeploy agent와 mysql, nodejs를 설치해보았다. 다음은 aws에서 작업해야 하는 것들에 대해 알아보자.</p>
+</div><div class="article-licensing box"><div class="licensing-title"><p>git action AWS Ec2 배포하기 1</p><p><a href="http://hanjuren.github.io/2021/09/09/aws/git-action-AWS-Ec2-배포하기-1/">http://hanjuren.github.io/2021/09/09/aws/git-action-AWS-Ec2-배포하기-1/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>Author</h6><p>han Ju Ryeon</p></div></div><div class="level-item is-narrow"><div><h6>Posted on</h6><p>2021-09-09</p></div></div><div class="level-item is-narrow"><div><h6>Updated on</h6><p>2021-12-05</p></div></div><div class="level-item is-narrow"><div><h6>Licensed under</h6><p><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/ec2/">ec2</a><a class="link-muted mr-2" rel="tag" href="/tags/aws/">aws</a><a class="link-muted mr-2" rel="tag" href="/tags/github/">github</a></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2021/09/09/aws/git-action-AWS-Ec2-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-2/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">git action AWS Ec2 배포하기 2</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2021/09/09/aws/Ec2-%EC%A0%91%EC%86%8D%ED%95%98%EA%B8%B0/"><span class="level-item">Ec2 접속하기</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">댓글</h3><div class="notification is-danger">You forgot to set the <code>shortname</code> for Disqus. Please set it in <code>_config.yml</code>.</div></div></div></div><div class="column column-left is-4-tablet is-3-desktop is-3-widescreen  order-1"><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar" src="/images/profile.png" alt="Han Ju Ryeon"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Han Ju Ryeon</p><p class="is-size-6 is-block">새로운것을 배우기 위해 노력하는 삶</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>경기도 의왕시</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">포스트</p><a href="/archives"><p class="title">48</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">카테고리</p><a href="/categories"><p class="title">17</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">태그</p><a href="/tags"><p class="title">15</p></a></div></div></nav><div class="level"><a class="level-item button is-info is-outlined is-rounded" href="/" target="_blank" rel="noopener">HOME</a></div><div class="level is-mobile is-multiline"><a class="level-item button is-transparent is-marginless" target="_blank" rel="external nofollow noopener noreferrer" title="Github" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><div class="card widget" id="toc" data-type="toc"><div class="card-content"><div class="menu"><h3 class="menu-label">카탈로그</h3><ul class="menu-list"><li><a class="level is-mobile" href="#Git-Action-Ec2-Codedeploy-자동배포-하기-1"><span class="level-left"><span class="level-item">1</span><span class="level-item">Git Action Ec2 Codedeploy 자동배포 하기 1.</span></span></a></li><li><a class="level is-mobile" href="#과정"><span class="level-left"><span class="level-item">2</span><span class="level-item">과정</span></span></a><ul class="menu-list"><li><a class="level is-mobile" href="#Ec2-Codedeploy-Agent-설치"><span class="level-left"><span class="level-item">2.1</span><span class="level-item">Ec2 Codedeploy Agent 설치</span></span></a></li><li><a class="level is-mobile" href="#NodeJS-설치"><span class="level-left"><span class="level-item">2.2</span><span class="level-item">NodeJS 설치</span></span></a></li><li><a class="level is-mobile" href="#MySQL-설치"><span class="level-left"><span class="level-item">2.3</span><span class="level-item">MySQL 설치</span></span></a><ul class="menu-list"><li><a class="level is-mobile" href="#MySQL-접속"><span class="level-left"><span class="level-item">2.3.1</span><span class="level-item">MySQL 접속</span></span></a></li></ul></li></ul></li></ul></div></div><style>#toc .menu-list > li > a.is-active + .menu-list { display: block; }#toc .menu-list > li > a + .menu-list { display: none; }</style><script src="/js/toc.js" defer></script></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a><p class="is-size-7"><span>&copy; 2021 han Ju Ryeon</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="external nofollow noopener noreferrer">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("ko");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="맨 위로" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "이 웹 사이트는 귀하의 경험을 향상시키기 위해 Cookie를 사용합니다.",
+          dismiss: "무시",
+          allow: "허용",
+          deny: "거부",
+          link: "더 알아보기",
+          policy: "Cookie 정책",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="입력 하세요..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"입력 하세요...","untitled":"(제목 없음)","posts":"포스트","pages":"페이지","categories":"카테고리","tags":"태그"});
+        });</script></body></html>

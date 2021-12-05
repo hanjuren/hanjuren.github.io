@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>SQLD 정규화 - Juryeon Blog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="Juryeon Blog"><meta name="msapplication-TileImage" content="/image/og_image.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Juryeon Blog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="정규화정규화의 가장 쉬운 의미는 데이터 베이스 수행에 있어 성능 향상 전략중에 한가지이다. 데이터 중복제거와 분류를 통해서 입력&amp;#x2F;수정&amp;#x2F;삭제 성능을 향상시켜준다. 하지만 계속되는 엔터티의 생성으로 조인이 빈번하게 일어나 데이터 조회 성능은 저하 될수도 있다. 가장 이해하기 쉬운 의미..  1정규화 : 모든 속성은 하나의 값을 가져야 한다.(반복적이고 같은 의"><meta property="og:type" content="blog"><meta property="og:title" content="SQLD 정규화"><meta property="og:url" content="http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EC%A0%95%EA%B7%9C%ED%99%94/"><meta property="og:site_name" content="Juryeon Blog"><meta property="og:description" content="정규화정규화의 가장 쉬운 의미는 데이터 베이스 수행에 있어 성능 향상 전략중에 한가지이다. 데이터 중복제거와 분류를 통해서 입력&amp;#x2F;수정&amp;#x2F;삭제 성능을 향상시켜준다. 하지만 계속되는 엔터티의 생성으로 조인이 빈번하게 일어나 데이터 조회 성능은 저하 될수도 있다. 가장 이해하기 쉬운 의미..  1정규화 : 모든 속성은 하나의 값을 가져야 한다.(반복적이고 같은 의"><meta property="og:locale" content="ko_KR"><meta property="og:image" content="http://hanjuren.github.io/img/og_image.png"><meta property="article:published_time" content="2021-10-17T05:00:13.000Z"><meta property="article:modified_time" content="2021-12-05T05:38:52.435Z"><meta property="article:author" content="han Ju Ryeon"><meta property="article:tag" content="SQLD"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EC%A0%95%EA%B7%9C%ED%99%94/"},"headline":"SQLD 정규화","image":["http://hanjuren.github.io/img/og_image.png"],"datePublished":"2021-10-17T05:00:13.000Z","dateModified":"2021-12-05T05:38:52.435Z","author":{"@type":"Person","name":"han Ju Ryeon"},"publisher":{"@type":"Organization","name":"Juryeon Blog","logo":{"@type":"ImageObject","url":"http://hanjuren.github.io/images/bloglogo.png"}},"description":"정규화정규화의 가장 쉬운 의미는 데이터 베이스 수행에 있어 성능 향상 전략중에 한가지이다. 데이터 중복제거와 분류를 통해서 입력&#x2F;수정&#x2F;삭제 성능을 향상시켜준다. 하지만 계속되는 엔터티의 생성으로 조인이 빈번하게 일어나 데이터 조회 성능은 저하 될수도 있다. 가장 이해하기 쉬운 의미..  1정규화 : 모든 속성은 하나의 값을 가져야 한다.(반복적이고 같은 의"}</script><link rel="canonical" href="http://hanjuren.github.io/2021/10/17/sqld/SQLD-%EC%A0%95%EA%B7%9C%ED%99%94/"><link rel="icon" href="/image/og_image.png"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script><!--!--><!--!--><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/rss2.xml" title="Juryeon Blog" type="application/rss+xml">
+</head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="카탈로그" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="검색" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-9-desktop is-9-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item"><time datetime="2021-10-17T05:00:13.000Z" title="10/17/2021, 2:00:13 PM">2021-10-17</time>&nbsp;게시 됨</span><span class="level-item"><time datetime="2021-12-05T05:38:52.435Z" title="12/5/2021, 2:38:52 PM">2021-12-05</time>&nbsp;업데이트 됨</span><span class="level-item"><a class="link-muted" href="/categories/SQLD/">SQLD</a></span></div></div><h1 class="title is-3 is-size-4-mobile">SQLD 정규화</h1><div class="content"><h3 id="정규화"><a href="#정규화" class="headerlink" title="정규화"></a>정규화</h3><p>정규화의 가장 쉬운 의미는 데이터 베이스 수행에 있어 성능 향상 전략중에 한가지이다.</p>
+<p>데이터 중복제거와 분류를 통해서 입력/수정/삭제 성능을 향상시켜준다. 하지만 계속되는 엔터티의 생성으로 조인이 빈번하게 일어나 데이터 조회 성능은 저하 될수도 있다.</p>
+<p>가장 이해하기 쉬운 의미..</p>
+<ol>
+<li>1정규화 : 모든 속성은 하나의 값을 가져야 한다.(반복적이고 같은 의미를 담는 형태가 있어서는 안된다.)</li>
+<li>2정규화 : 모든 속성은 기본키에 종속 되어야 한다.</li>
+<li>3정규화 : 기본키가 아닌 모든 속성간에 서로를 종속 할 수 없다.</li>
+</ol>
+<p>예를 들어보자…</p>
+<table>
+<thead>
+<tr>
+<th><strong>주문 테이블</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>주문번호 (PK)</td>
+</tr>
+<tr>
+<td>주문일자</td>
+</tr>
+<tr>
+<td>품목코드</td>
+</tr>
+<tr>
+<td>품목단가</td>
+</tr>
+<tr>
+<td>주문수량</td>
+</tr>
+<tr>
+<td>고객번호</td>
+</tr>
+<tr>
+<td>고객명</td>
+</tr>
+</tbody></table>
+<p>주문이라는 테이블에 주문에 대한 모든 데이터가 들어가있다. 예를 들어 내가 옷 두개를 한번에 주문한다. 그렇다면 데이터는 다음과 같이 저장이 될것이다.</p>
+<table>
+<thead>
+<tr>
+<th>주문번호</th>
+<th>주문일자</th>
+<th>품목코드</th>
+<th>품목단가</th>
+<th>주문수량</th>
+<th>고객번호</th>
+<th>고객명</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>10/17</td>
+<td>1</td>
+<td>2000</td>
+<td>1</td>
+<td>1</td>
+<td>한주련</td>
+</tr>
+<tr>
+<td>1</td>
+<td>10/17</td>
+<td>2</td>
+<td>3000</td>
+<td>1</td>
+<td>1</td>
+<td>한주련</td>
+</tr>
+</tbody></table>
+<p>1번이라는 주문번호로 주문한 상품의 수만큼 중복된 컬럼이 존재 하게 될것이다. 이 구조에서는 1정규화가 필요하다. 1번이라는 주문번호가 중복되지 않도록…</p>
+<table>
+<thead>
+<tr>
+<th><strong>주문</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>주문 번호 (PK)</td>
+</tr>
+<tr>
+<td>주문일자</td>
+</tr>
+<tr>
+<td>고객번호</td>
+</tr>
+<tr>
+<td>고객명</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>주문품목</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>주문번호 (FK)</td>
+</tr>
+<tr>
+<td>품목코드</td>
+</tr>
+<tr>
+<td>품목단가</td>
+</tr>
+<tr>
+<td>주문수량</td>
+</tr>
+</tbody></table>
+<p>1차 정규화의 결과로 이제 1번이라는 하나의 기본키로 여러개의 상품을 중복없이 식별할 수 있다.</p>
+<p>2차 정규화는 주문품목 테이블에서 필요성이 나타난다. 2차 정규화란 <em>복합키로 구성된 (여러개의 PK) 경우 2차 정규화의 대상이 된다</em> 이는 복합키의 일부에만 종속되는 속성이 있을 경우 이 속성을 분리해주는 것이다.</p>
+<p>1차 정규화를 마친 주문 품목 테이블에서 품목단가라는 속성은 품목코드라는 키와만 관련이 있고 주문번호와는 관련이 없다 이때 품목단가 속성이 일부 키에만 종속되어 있으므로 해당 속성을 분리해주면 된다.</p>
+<table>
+<thead>
+<tr>
+<th><strong>주문품목</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>주문번호 (FK)</td>
+</tr>
+<tr>
+<td>품목코드 (FK)</td>
+</tr>
+<tr>
+<td>주문수량</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>품목</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>품목코드 (PK)</td>
+</tr>
+<tr>
+<td>품목 단가</td>
+</tr>
+</tbody></table>
+<p>2차 정규화를 통해 일부의 종속성을 가진 속성을 분리 해주었다.</p>
+<p>마지막 3차 정규화는 일반 속성인 컬럼은 기본키에 의존해야 하는데 일반 속성에 의존하고 있는 속성들을 분리하는 것이다.</p>
+<p>주문테이블을 살펴보면 고객명이라는 속성은 기본키인 주문 번호에 종속성을 가지고 있지 않고 고객번호 속성에 종속성을 가지고 있는 상태이다. 따라서 3차 정규화의 대상이 된다.</p>
+<table>
+<thead>
+<tr>
+<th><strong>주문</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>주문번호 (PK)</td>
+</tr>
+<tr>
+<td>주문일자</td>
+</tr>
+<tr>
+<td>고객번호 (FK)</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>화원</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>회원번호 (PK)</td>
+</tr>
+<tr>
+<td>고객명</td>
+</tr>
+</tbody></table>
+<p>솔직히 그동안 데이터베이스 설계하면서 정규화에대한 개념을 모르고 한번에 이과정을 수행했는데 그럼 된거 아닌가 싶지만… 시험을 보기위해서 과정을 나열하다보니 내가 해온 과정과 비슷하지만 다른.. 어떤 그런 어려운 느낌…</p>
+</div><div class="article-licensing box"><div class="licensing-title"><p>SQLD 정규화</p><p><a href="http://hanjuren.github.io/2021/10/17/sqld/SQLD-정규화/">http://hanjuren.github.io/2021/10/17/sqld/SQLD-정규화/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>Author</h6><p>han Ju Ryeon</p></div></div><div class="level-item is-narrow"><div><h6>Posted on</h6><p>2021-10-17</p></div></div><div class="level-item is-narrow"><div><h6>Updated on</h6><p>2021-12-05</p></div></div><div class="level-item is-narrow"><div><h6>Licensed under</h6><p><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/SQLD/">SQLD</a></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2021/11/02/project/apt/%EC%95%84%ED%8C%8C%ED%8A%B8-%EC%98%A8%EB%8F%84-%EC%8A%B5%EB%8F%84-%EC%A0%84%EB%A0%A5-%EC%8B%A4%EC%8B%9C%EA%B0%84-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EA%B4%80%EB%A6%AC-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-Part-1/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">아파트 온도, 습도, 전력 실시간 데이터 관리 프로젝트 Part 1.</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2021/10/17/sqld/SQLD-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8%EB%A7%81/"><span class="level-item">SQLD 데이터 모델링</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">댓글</h3><div class="notification is-danger">You forgot to set the <code>shortname</code> for Disqus. Please set it in <code>_config.yml</code>.</div></div></div></div><div class="column column-left is-4-tablet is-3-desktop is-3-widescreen  order-1"><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar" src="/images/profile.png" alt="Han Ju Ryeon"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Han Ju Ryeon</p><p class="is-size-6 is-block">새로운것을 배우기 위해 노력하는 삶</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>경기도 의왕시</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">포스트</p><a href="/archives"><p class="title">48</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">카테고리</p><a href="/categories"><p class="title">17</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">태그</p><a href="/tags"><p class="title">15</p></a></div></div></nav><div class="level"><a class="level-item button is-info is-outlined is-rounded" href="/" target="_blank" rel="noopener">HOME</a></div><div class="level is-mobile is-multiline"><a class="level-item button is-transparent is-marginless" target="_blank" rel="external nofollow noopener noreferrer" title="Github" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><div class="card widget" id="toc" data-type="toc"><div class="card-content"><div class="menu"><h3 class="menu-label">카탈로그</h3><ul class="menu-list"><li><a class="level is-mobile" href="#정규화"><span class="level-left"><span class="level-item">1</span><span class="level-item">정규화</span></span></a></li></ul></div></div><style>#toc .menu-list > li > a.is-active + .menu-list { display: block; }#toc .menu-list > li > a + .menu-list { display: none; }</style><script src="/js/toc.js" defer></script></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a><p class="is-size-7"><span>&copy; 2021 han Ju Ryeon</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="external nofollow noopener noreferrer">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("ko");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="맨 위로" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "이 웹 사이트는 귀하의 경험을 향상시키기 위해 Cookie를 사용합니다.",
+          dismiss: "무시",
+          allow: "허용",
+          deny: "거부",
+          link: "더 알아보기",
+          policy: "Cookie 정책",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="입력 하세요..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"입력 하세요...","untitled":"(제목 없음)","posts":"포스트","pages":"페이지","categories":"카테고리","tags":"태그"});
+        });</script></body></html>

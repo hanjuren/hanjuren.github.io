@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>Ec2 Codedeploy시 겪었던 에러들 그리고 해결했던 방법들 - Juryeon Blog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="Juryeon Blog"><meta name="msapplication-TileImage" content="/image/og_image.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Juryeon Blog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록 MySQL Server 자동 종료 인스턴스 접속을 끊고 나면 mysql 서버가 자동으로 종료되어 실행이 되지 않는 문제가 있었다. 프로젝트 내에서 TypeORM을 통해 mysql과 연결을 해야 하는데 서버가 꺼져있으니 연결이 되지 않아 프로젝트가 실행되지 않는 문제였다.이 문제는 인스턴스에 연결 시 자"><meta property="og:type" content="blog"><meta property="og:title" content="Ec2 Codedeploy시 겪었던 에러들 그리고 해결했던 방법들"><meta property="og:url" content="http://hanjuren.github.io/2021/09/09/aws/Ec2-Codedeploy%EC%8B%9C-%EA%B2%AA%EC%97%88%EB%8D%98-%EC%97%90%EB%9F%AC%EB%93%A4-%EA%B7%B8%EB%A6%AC%EA%B3%A0-%ED%95%B4%EA%B2%B0%ED%96%88%EB%8D%98-%EB%B0%A9%EB%B2%95%EB%93%A4/"><meta property="og:site_name" content="Juryeon Blog"><meta property="og:description" content="자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록 MySQL Server 자동 종료 인스턴스 접속을 끊고 나면 mysql 서버가 자동으로 종료되어 실행이 되지 않는 문제가 있었다. 프로젝트 내에서 TypeORM을 통해 mysql과 연결을 해야 하는데 서버가 꺼져있으니 연결이 되지 않아 프로젝트가 실행되지 않는 문제였다.이 문제는 인스턴스에 연결 시 자"><meta property="og:locale" content="ko_KR"><meta property="og:image" content="https://ifh.cc/g/SfCPvV.png"><meta property="og:image" content="https://ifh.cc/g/AhiNJE.png"><meta property="article:published_time" content="2021-09-09T08:49:36.000Z"><meta property="article:modified_time" content="2021-12-05T05:38:52.425Z"><meta property="article:author" content="han Ju Ryeon"><meta property="article:tag" content="ec2"><meta property="article:tag" content="aws"><meta property="article:tag" content="github"><meta property="article:tag" content="CodeDeploy"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="https://ifh.cc/g/SfCPvV.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://hanjuren.github.io/2021/09/09/aws/Ec2-Codedeploy%EC%8B%9C-%EA%B2%AA%EC%97%88%EB%8D%98-%EC%97%90%EB%9F%AC%EB%93%A4-%EA%B7%B8%EB%A6%AC%EA%B3%A0-%ED%95%B4%EA%B2%B0%ED%96%88%EB%8D%98-%EB%B0%A9%EB%B2%95%EB%93%A4/"},"headline":"Ec2 Codedeploy시 겪었던 에러들 그리고 해결했던 방법들","image":["https://ifh.cc/g/SfCPvV.png","https://ifh.cc/g/AhiNJE.png"],"datePublished":"2021-09-09T08:49:36.000Z","dateModified":"2021-12-05T05:38:52.425Z","author":{"@type":"Person","name":"han Ju Ryeon"},"publisher":{"@type":"Organization","name":"Juryeon Blog","logo":{"@type":"ImageObject","url":"http://hanjuren.github.io/images/bloglogo.png"}},"description":"자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록 MySQL Server 자동 종료 인스턴스 접속을 끊고 나면 mysql 서버가 자동으로 종료되어 실행이 되지 않는 문제가 있었다. 프로젝트 내에서 TypeORM을 통해 mysql과 연결을 해야 하는데 서버가 꺼져있으니 연결이 되지 않아 프로젝트가 실행되지 않는 문제였다.이 문제는 인스턴스에 연결 시 자"}</script><link rel="canonical" href="http://hanjuren.github.io/2021/09/09/aws/Ec2-Codedeploy%EC%8B%9C-%EA%B2%AA%EC%97%88%EB%8D%98-%EC%97%90%EB%9F%AC%EB%93%A4-%EA%B7%B8%EB%A6%AC%EA%B3%A0-%ED%95%B4%EA%B2%B0%ED%96%88%EB%8D%98-%EB%B0%A9%EB%B2%95%EB%93%A4/"><link rel="icon" href="/image/og_image.png"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script><!--!--><!--!--><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/rss2.xml" title="Juryeon Blog" type="application/rss+xml">
+</head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="카탈로그" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="검색" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-9-desktop is-9-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item"><time datetime="2021-09-09T08:49:36.000Z" title="9/9/2021, 5:49:36 PM">2021-09-09</time>&nbsp;게시 됨</span><span class="level-item"><time datetime="2021-12-05T05:38:52.425Z" title="12/5/2021, 2:38:52 PM">2021-12-05</time>&nbsp;업데이트 됨</span><span class="level-item"><a class="link-muted" href="/categories/aws/">aws</a><span> / </span><a class="link-muted" href="/categories/ec2/">ec2</a><span> / </span><a class="link-muted" href="/categories/github/">github</a><span> / </span><a class="link-muted" href="/categories/CodeDeploy/">CodeDeploy</a></span></div></div><h1 class="title is-3 is-size-4-mobile">Ec2 Codedeploy시 겪었던 에러들 그리고 해결했던 방법들</h1><div class="content"><h2 id="자동배포를-진행하며-발생한-에러들과-해결했던-내용-기록"><a href="#자동배포를-진행하며-발생한-에러들과-해결했던-내용-기록" class="headerlink" title="자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록"></a>자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록</h2>
+<h3 id="MySQL-Server-자동-종료"><a href="#MySQL-Server-자동-종료" class="headerlink" title="MySQL Server 자동 종료"></a>MySQL Server 자동 종료</h3>
+<p>인스턴스 접속을 끊고 나면 mysql 서버가 자동으로 종료되어 실행이 되지 않는 문제가 있었다. 프로젝트 내에서 TypeORM을 통해 mysql과 연결을 해야 하는데 서버가 꺼져있으니 연결이 되지 않아 프로젝트가 실행되지 않는 문제였다.<br>이 문제는 인스턴스에 연결 시 자동으로 mysql server가 자동으로 실행 되도록 설정을 해주는 방법으로 해결을 했다.</p>
+<figure class="highlight sh">
+  <table>
+    <tr>
+      <td class="gutter">
+        <pre><span class="line">1</span><br></pre>
+      </td>
+      <td class="code">
+        <pre><span class="line">systemctl</span><br></pre>
+      </td>
+    </tr>
+  </table>
+</figure>
+<p>해당 명령어를 통해 서버 부팅 시 실행되는 프로그램들의 목록을 확인 할 수 있다. 이 목록에 mysqld를 추가해 주면 된다.</p>
+<figure class="highlight sh">
+  <table>
+    <tr>
+      <td class="gutter">
+        <pre><span class="line">1</span><br></pre>
+      </td>
+      <td class="code">
+        <pre><span class="line">sudo systemctl <span class="built_in">enable</span> mysqld</span><br></pre>
+      </td>
+    </tr>
+  </table>
+</figure>
+<p>다시 목록을 확인해보면 프로그램이 등록된것을 확인 할 수 있다.</p>
+<p><img src="https://ifh.cc/g/SfCPvV.png"><br></p>
+<span id="more"></span>
+<hr>
+<h3 id="Ec2인스턴스-메모리-부족"><a href="#Ec2인스턴스-메모리-부족" class="headerlink" title="Ec2인스턴스 메모리 부족"></a>Ec2인스턴스 메모리 부족</h3>
+<p>프리티어로 사용중인 EC2 t2.micro에 mysql을 설치하여 구동하니 mysql이 메모리를 상당히 잡아 먹는 다는 것을 알게되었다… 자동으로 swap 영역을 지정해주지 않는 다는 것… 또한 메모리가 1GB인데 모두 사용하지 않는다는 것 이문제를 해결해보고자 swqp구성을 직접 해주었다.</p>
+<figure class="highlight sh">
+  <table>
+    <tr>
+      <td class="gutter">
+        <pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre>
+      </td>
+      <td class="code">
+        <pre><span class="line">dd <span class="keyword">if</span>=/dev/zero of=/swapfile bs=1M count=1024</span><br><span class="line">mkswap /swapfile</span><br><span class="line">swapon /swapfile</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;/swapfile swap swap defaults 0 0&quot;</span> &gt;&gt; /etc/fstab</span><br></pre>
+      </td>
+    </tr>
+  </table>
+</figure>
+
+<p>위의 명령어들은 swqp영역을 직접 할당해주는 명령어들이다. free -m 명령어를 실행해보면 swap 영역 할당 전에는 swqp영역의 메모리가 0인데 할당 시 지정 한 만큼 늘어난 것을 확인할 수 있다.</p>
+<p><img src="https://ifh.cc/g/AhiNJE.png"><br></p>
+<hr>
+<h3 id="배포-무한-로딩…"><a href="#배포-무한-로딩…" class="headerlink" title="배포 무한 로딩…"></a>배포 무한 로딩…</h3>
+<p>배포 단계시 무한 Pendding 상태가 지속되는 경우가 발생했다.. 그래서 또 무한 구글링…<br>찾아낸 해결법은 그냥 인스턴스에서 codedeploy-agent를 재실행 하라고 한다. 물론 이방법으로 해결이 안되면 다른 방법을 찾아야 겠지만 이방법으로 해결을 했다.</p>
+<p>먼저 codedeploy-agent를 중지해준다.</p>
+<figure class="highlight sh">
+  <table>
+    <tr>
+      <td class="gutter">
+        <pre><span class="line">1</span><br></pre>
+      </td>
+      <td class="code">
+        <pre><span class="line">sudo systemctl stop codedeploy-agent</span><br></pre>
+      </td>
+    </tr>
+  </table>
+</figure>
+
+<p>이후 다시 시작해주면 된다. 이렇게 간단?</p>
+<figure class="highlight sh">
+  <table>
+    <tr>
+      <td class="gutter">
+        <pre><span class="line">1</span><br></pre>
+      </td>
+      <td class="code">
+        <pre><span class="line">sudo systemctl start codedeploy-agent</span><br></pre>
+      </td>
+    </tr>
+  </table>
+</figure>
+
+<p>그리고나서 다시 실행 상태를 확인해주면 끝!</p>
+</div><div class="article-licensing box"><div class="licensing-title"><p>Ec2 Codedeploy시 겪었던 에러들 그리고 해결했던 방법들</p><p><a href="http://hanjuren.github.io/2021/09/09/aws/Ec2-Codedeploy시-겪었던-에러들-그리고-해결했던-방법들/">http://hanjuren.github.io/2021/09/09/aws/Ec2-Codedeploy시-겪었던-에러들-그리고-해결했던-방법들/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>Author</h6><p>han Ju Ryeon</p></div></div><div class="level-item is-narrow"><div><h6>Posted on</h6><p>2021-09-09</p></div></div><div class="level-item is-narrow"><div><h6>Updated on</h6><p>2021-12-05</p></div></div><div class="level-item is-narrow"><div><h6>Licensed under</h6><p><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="external nofollow noopener noreferrer" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/ec2/">ec2</a><a class="link-muted mr-2" rel="tag" href="/tags/aws/">aws</a><a class="link-muted mr-2" rel="tag" href="/tags/github/">github</a><a class="link-muted mr-2" rel="tag" href="/tags/CodeDeploy/">CodeDeploy</a></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2021/09/09/project/airbnb/Nodejs-express%EB%A1%9C-%EC%97%90%EC%96%B4%EB%B9%84%EC%95%A4%EB%B9%84-%ED%81%B4%EB%A1%A0%EC%BD%94%EB%94%A9-%ED%95%B4%EB%B3%B4%EA%B8%B0-1/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">Nodejs express로 에어비앤비 클론코딩 해보기 1.</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2021/09/09/aws/git-action-AWS-Ec2-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-4/"><span class="level-item">git action AWS Ec2 배포하기 4</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">댓글</h3><div class="notification is-danger">You forgot to set the <code>shortname</code> for Disqus. Please set it in <code>_config.yml</code>.</div></div></div></div><div class="column column-left is-4-tablet is-3-desktop is-3-widescreen  order-1"><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar" src="/images/profile.png" alt="Han Ju Ryeon"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Han Ju Ryeon</p><p class="is-size-6 is-block">새로운것을 배우기 위해 노력하는 삶</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>경기도 의왕시</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">포스트</p><a href="/archives"><p class="title">48</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">카테고리</p><a href="/categories"><p class="title">17</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">태그</p><a href="/tags"><p class="title">15</p></a></div></div></nav><div class="level"><a class="level-item button is-info is-outlined is-rounded" href="/" target="_blank" rel="noopener">HOME</a></div><div class="level is-mobile is-multiline"><a class="level-item button is-transparent is-marginless" target="_blank" rel="external nofollow noopener noreferrer" title="Github" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><div class="card widget" id="toc" data-type="toc"><div class="card-content"><div class="menu"><h3 class="menu-label">카탈로그</h3><ul class="menu-list"><li><a class="level is-mobile" href="#자동배포를-진행하며-발생한-에러들과-해결했던-내용-기록"><span class="level-left"><span class="level-item">1</span><span class="level-item">자동배포를 진행하며 발생한 에러들과 해결했던 내용 기록</span></span></a><ul class="menu-list"><li><a class="level is-mobile" href="#MySQL-Server-자동-종료"><span class="level-left"><span class="level-item">1.1</span><span class="level-item">MySQL Server 자동 종료</span></span></a></li><li><a class="level is-mobile" href="#Ec2인스턴스-메모리-부족"><span class="level-left"><span class="level-item">1.2</span><span class="level-item">Ec2인스턴스 메모리 부족</span></span></a></li><li><a class="level is-mobile" href="#배포-무한-로딩…"><span class="level-left"><span class="level-item">1.3</span><span class="level-item">배포 무한 로딩…</span></span></a></li></ul></li></ul></div></div><style>#toc .menu-list > li > a.is-active + .menu-list { display: block; }#toc .menu-list > li > a + .menu-list { display: none; }</style><script src="/js/toc.js" defer></script></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/images/bloglogo.png" alt="Juryeon Blog" height="28"></a><p class="is-size-7"><span>&copy; 2021 han Ju Ryeon</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="external nofollow noopener noreferrer">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="external nofollow noopener noreferrer" title="Download on GitHub" href="https://github.com/hanjuren"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("ko");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="맨 위로" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "이 웹 사이트는 귀하의 경험을 향상시키기 위해 Cookie를 사용합니다.",
+          dismiss: "무시",
+          allow: "허용",
+          deny: "거부",
+          link: "더 알아보기",
+          policy: "Cookie 정책",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="입력 하세요..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"입력 하세요...","untitled":"(제목 없음)","posts":"포스트","pages":"페이지","categories":"카테고리","tags":"태그"});
+        });</script></body></html>
