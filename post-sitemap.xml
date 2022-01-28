@@ -9,6 +9,14 @@
 
 
     <url>
+        <loc>http://hanjuren.github.io/2022/01/28/ruby/Ruby-%ED%8C%8C%EC%9D%BC-%EC%9D%BD%EA%B8%B0-%EC%93%B0%EA%B8%B0/</loc>
+        <lastmod>2022-01-28T08:56:46.334Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
         <loc>http://hanjuren.github.io/2022/01/08/%EC%9D%B8%ED%85%94%EB%A6%AC%EC%A0%9C%EC%9D%B4-%EB%8B%A8%EC%B6%95%ED%82%A4-%EC%A0%95%EB%A6%AC-%EA%B8%B0%EB%A1%9D%EC%A4%91/</loc>
         <lastmod>2022-01-08T14:44:23.761Z</lastmod>
         <changefreq>weekly</changefreq>
@@ -49,7 +57,7 @@
     </url>
 
     <url>
-        <loc>http://hanjuren.github.io/2021/11/23/%EB%A3%A8%EB%B9%84-%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0/</loc>
+        <loc>http://hanjuren.github.io/2021/11/23/ruby/%EB%A3%A8%EB%B9%84-%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0/</loc>
         <lastmod>2021-12-05T05:38:52.436Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
