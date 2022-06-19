@@ -9,8 +9,8 @@
 
 
     <url>
-        <loc>http://hanjuren.github.io/2022/06/15/nodejs/express-serverless-%EA%B5%AC%EC%B6%95-1/</loc>
-        <lastmod>2022-06-15T01:45:37.743Z</lastmod>
+        <loc>http://hanjuren.github.io/2022/06/15/express-serverless-%EA%B5%AC%EC%B6%95-2/</loc>
+        <lastmod>2022-06-19T10:58:54.786Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
 
@@ -18,7 +18,15 @@
 
     <url>
         <loc>http://hanjuren.github.io/2022/05/24/aws/AWS-CLI-%EC%84%A4%EC%A0%95%ED%95%98%EA%B8%B0/</loc>
-        <lastmod>2022-05-25T23:29:52.049Z</lastmod>
+        <lastmod>2022-06-19T10:54:55.219Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
+        <loc>http://hanjuren.github.io/2022/06/15/nodejs/express-serverless-%EA%B5%AC%EC%B6%95-1/</loc>
+        <lastmod>2022-06-19T10:53:11.171Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
 
