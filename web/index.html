@@ -725,7 +725,10 @@ function initCalendar() {
     initialView: isMobile ? 'listMonth' : 'dayGridMonth',
     locale: 'ko',
     height: 'auto',
-    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+    // 모바일: 좁은 셀에 접수기간 막대가 겹쳐 항목이 안 보이므로 월간 토글 제거(목록 전용)
+    headerToolbar: isMobile
+      ? { left: 'prev,next today', center: 'title', right: '' }
+      : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
     buttonText: { today: '오늘', month: '월', list: '목록' },
     titleFormat: { year: 'numeric', month: 'long' },
     events: buildEvents(),
