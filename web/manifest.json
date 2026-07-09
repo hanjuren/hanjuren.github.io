@@ -1,0 +1,15 @@
+{
+  "name": "청약 캘린더 — 서울·경기 공공임대",
+  "short_name": "청약캘린더",
+  "description": "서울·경기 공공임대 청약 일정 캘린더와 신청 관리",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

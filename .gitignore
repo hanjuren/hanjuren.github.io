@@ -1,0 +1,12 @@
+.env
+data/*.json
+node_modules/
+.DS_Store
+
+# Swift 빌드 산출물
+macapp/.build/
+macapp/dist/
+*.o
+
+# 빌드 시 생성되는 키 파일
+macapp/Sources/CheongyakCal/Secrets.swift

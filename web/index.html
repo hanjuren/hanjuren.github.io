@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>청약 캘린더 — 서울·경기 공공임대</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  @font-face {
+    font-family: "Pretendard Variable";
+    font-weight: 45 920;
+    font-style: normal;
+    font-display: swap;
+    src: url("vendor/PretendardVariable.woff2") format("woff2-variations");
+  }
+</style>
+<script src="vendor/fullcalendar.min.js"></script>
+<script src="data.js"></script>
+<script src="config.js" onerror="void 0"></script>
+<style>
+  /* ── 디자인 토큰 (dataviz 검증 팔레트) ─────────────────── */
+  :root {
+    --page:     #f9f9f7;
+    --surface:  #fcfcfb;
+    --ink:      #0b0b0b;
+    --ink-2:    #52514e;
+    --muted:    #898781;
+    --hairline: #e1e0d9;
+    --ring:     rgba(11,11,11,.10);
+    --seoul:    #2a78d6;   /* categorical slot 1 · blue */
+    --gyeonggi: #1baf7a;   /* categorical slot 2 · aqua */
+    --winner:   #eda100;   /* categorical slot 3 · yellow */
+    --seoul-bg:    rgba(42,120,214,.11);
+    --gyeonggi-bg: rgba(27,175,122,.13);
+    --winner-bg:   rgba(237,161,0,.15);
+    --critical: #d03b3b;
+    --shadow: 0 1px 2px rgba(11,11,11,.04), 0 8px 24px rgba(11,11,11,.05);
+  }
+  :root[data-theme="dark"] {
+    --page:     #0d0d0d;
+    --surface:  #1a1a19;
+    --ink:      #ffffff;
+    --ink-2:    #c3c2b7;
+    --muted:    #898781;
+    --hairline: #2c2c2a;
+    --ring:     rgba(255,255,255,.10);
+    --seoul:    #3987e5;
+    --gyeonggi: #199e70;
+    --winner:   #c98500;
+    --seoul-bg:    rgba(57,135,229,.18);
+    --gyeonggi-bg: rgba(25,158,112,.20);
+    --winner-bg:   rgba(201,133,0,.20);
+    --critical: #d03b3b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page:     #0d0d0d;
+      --surface:  #1a1a19;
+      --ink:      #ffffff;
+      --ink-2:    #c3c2b7;
+      --muted:    #898781;
+      --hairline: #2c2c2a;
+      --ring:     rgba(255,255,255,.10);
+      --seoul:    #3987e5;
+      --gyeonggi: #199e70;
+      --winner:   #c98500;
+      --seoul-bg:    rgba(57,135,229,.18);
+      --gyeonggi-bg: rgba(25,158,112,.20);
+      --winner-bg:   rgba(201,133,0,.20);
+      --critical: #d03b3b;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+    /* nbadge는 @media 기반이라 수동 라이트 강제 시 되돌린다 */
+    :root[data-theme="light"] .nbadge { background: #4a3aa7; color: #fff; }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+
+  /* ── 헤더 ──────────────────────────────────────────────── */
+  header {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 14px 28px;
+    background: color-mix(in srgb, var(--page) 93%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark {
+    width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--seoul), var(--gyeonggi));
+    color: #fff; font-size: 15px;
+  }
+  .brand h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -.2px; }
+  .brand .sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .seg {
+    display: inline-flex; padding: 3px; gap: 2px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border-radius: 10px;
+  }
+  .seg button {
+    border: none; background: transparent; color: var(--ink-2); cursor: pointer;
+    padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    font-family: inherit; transition: all .15s ease;
+  }
+  /* 선택 상태: 라이트=흰 서피스+그림자, 다크=밝은 틴트 (지역/내청약/신규 공통) */
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  :root[data-theme="dark"] .seg button.on {
+    background: color-mix(in srgb, var(--ink) 20%, var(--surface));
+    box-shadow: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .seg button.on {
+      background: color-mix(in srgb, var(--ink) 20%, var(--surface));
+      box-shadow: none;
+    }
+  }
+  .seg button .cnt { color: var(--muted); font-weight: 700; }
+  .seg button.on .cnt { color: var(--ink-2); }
+  .seg button .cnt.pulse { color: var(--critical); animation: pulse 1s ease 3; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .theme-btn {
+    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
+    width: 34px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 15px;
+    font-family: inherit; display: grid; place-items: center; line-height: 1;
+  }
+  .theme-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .rbtn {
+    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
+    padding: 6px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .rbtn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .rbtn:disabled { opacity: .55; cursor: default; }
+  .nbadge {
+    display: inline-block; font-size: 9.5px; font-weight: 800; line-height: 1;
+    padding: 2.5px 4.5px; border-radius: 5px; vertical-align: 1px; margin-right: 4px;
+    background: #4a3aa7; color: #fff;
+  }
+  :root[data-theme="dark"] .nbadge { background: #9085e9; color: #1a1a19; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .nbadge { background: #9085e9; color: #1a1a19; }
+  }
+  .status-seg { display: flex; gap: 5px; flex-wrap: wrap; }
+  .status-seg button {
+    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
+    padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .status-seg button.on { background: var(--ink); border-color: var(--ink); color: var(--page); }
+  .my-box { border-top: 1px solid var(--hairline); margin-top: 14px; padding-top: 14px; }
+  .my-box .row-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .my-box textarea {
+    width: 100%; margin-top: 10px; min-height: 52px; resize: vertical;
+    background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: 10px; padding: 9px 11px;
+    font-family: inherit; font-size: 13px;
+  }
+  .my-box textarea:focus { outline: none; border-color: var(--muted); }
+  .spacer { margin-left: auto; }
+  .updated { font-size: 12px; color: var(--muted); }
+
+  /* ── 레이아웃 ──────────────────────────────────────────── */
+  main { max-width: 1240px; margin: 0 auto; padding: 24px 28px 48px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 14px;
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .stat .label { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  .stat .value { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin-top: 2px; }
+  .stat .value small { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+  .stat .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  .card {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 16px;
+    box-shadow: var(--shadow); padding: 18px;
+  }
+
+  /* ── 마감 임박 패널 ────────────────────────────────────── */
+  .panel h3 { margin: 2px 4px 12px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .due { display: flex; flex-direction: column; gap: 6px; }
+  .due-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 11px; cursor: pointer; transition: background .12s ease;
+  }
+  .due-item:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .due-item .dot { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+  .due-item .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .due-item .t .name {
+    display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .due-item .t .when { display: block; font-size: 11px; color: var(--muted); }
+  .dday {
+    flex: none; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink-2);
+  }
+  .dday.urgent { background: color-mix(in srgb, var(--critical) 14%, transparent); color: var(--critical); }
+  .empty { padding: 20px 8px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+  /* ── FullCalendar 리스타일 ─────────────────────────────── */
+  #calendar { --fc-border-color: var(--hairline); --fc-page-bg-color: transparent;
+              --fc-today-bg-color: color-mix(in srgb, var(--seoul) 5%, transparent); font-size: 12.5px; }
+  .fc .fc-toolbar-title { font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+  .fc .fc-button {
+    background: transparent; border: 1px solid var(--hairline); color: var(--ink-2);
+    font-weight: 600; font-size: 12.5px; border-radius: 8px; padding: 5px 10px;
+    font-family: inherit; box-shadow: none !important;
+  }
+  .fc .fc-button:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
+  .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .fc .fc-button-primary:not(:disabled):active { background: var(--ink); border-color: var(--ink); color: var(--page); }
+  .fc .fc-col-header-cell-cushion { color: var(--muted); font-weight: 600; font-size: 11.5px; padding: 8px 4px; }
+  .fc .fc-daygrid-day-number { color: var(--ink-2); font-weight: 600; font-size: 12px; padding: 6px 8px; }
+  .fc .fc-day-today .fc-daygrid-day-number {
+    background: var(--seoul); color: #fff; border-radius: 999px;
+    min-width: 22px; height: 22px; display: inline-grid; place-items: center; padding: 0 4px; margin: 4px;
+  }
+  .fc .fc-day-sat .fc-daygrid-day-number { color: var(--seoul); }
+  .fc .fc-day-sun .fc-daygrid-day-number { color: var(--critical); }
+  .fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid { border-color: var(--hairline); }
+
+  .fc-event { border: none !important; border-radius: 6px; font-family: inherit; }
+  .fc-event .fc-event-main { padding: 1px 6px; }
+  .ev { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .ev .pin { width: 6px; height: 6px; border-radius: 2px; flex: none; }
+  .ev .txt {
+    font-size: 11px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fc-daygrid-dot-event:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .fc .fc-popover {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.35); z-index: 40; overflow: hidden;
+  }
+  .fc .fc-popover-header {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--ink-2);
+  }
+  .fc .fc-popover-close { color: var(--muted); opacity: 1; }
+  .fc .fc-popover-body { padding: 6px 8px; max-height: 320px; overflow-y: auto; }
+  .fc .fc-popover-body .fc-daygrid-event-harness { margin: 2px 0; }
+  .fc .fc-list { border-color: var(--hairline); }
+  .fc .fc-list-day-cushion { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .fc .fc-list-event:hover td { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+
+  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px;
+            font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
+
+  /* ── 지도 ──────────────────────────────────────────────── */
+  #map-view { display: none; }
+  #map { width: 100%; height: calc(100vh - 220px); min-height: 420px; border-radius: 12px; overflow: hidden; }
+  .map-placeholder {
+    display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
+    height: 100%; min-height: 420px; border: 1.5px dashed var(--hairline); border-radius: 12px;
+    color: var(--muted); text-align: center; line-height: 1.7; font-size: 13px;
+  }
+  .map-placeholder .big { font-size: 34px; }
+  .map-placeholder code {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    padding: 2px 7px; border-radius: 6px; font-size: 12px;
+  }
+
+  /* ── 상세 다이얼로그 ───────────────────────────────────── */
+  dialog {
+    border: 1px solid var(--ring); border-radius: 18px; padding: 0;
+    max-width: 500px; width: 92%; background: var(--surface); color: var(--ink);
+    box-shadow: 0 24px 64px rgba(0,0,0,.28);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.4); backdrop-filter: blur(2px); }
+  .dlg-body { padding: 22px 24px 8px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink-2);
+  }
+  .chip.region-seoul    { background: var(--seoul-bg);    color: var(--seoul); }
+  .chip.region-gyeonggi { background: var(--gyeonggi-bg); color: var(--gyeonggi); }
+  .chip.dchip { background: color-mix(in srgb, var(--critical) 13%, transparent); color: var(--critical); }
+  .chip.src { background: transparent; border: 1px solid var(--hairline); color: var(--muted); }
+  .dlg-body h2 { font-size: 15.5px; font-weight: 700; margin: 0 0 4px; line-height: 1.45; letter-spacing: -.2px; }
+  .dlg-body .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .kv { display: grid; grid-template-columns: 96px 1fr; row-gap: 7px; font-size: 13px;
+        border-top: 1px solid var(--hairline); padding-top: 14px; }
+  .kv .k { color: var(--muted); font-weight: 600; font-size: 12px; padding-top: 1px; }
+  .kv .v { font-weight: 500; word-break: keep-all; }
+  .kv .v.strong { font-weight: 700; }
+  .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px 20px; }
+  .btn {
+    padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700;
+    text-decoration: none; cursor: pointer; font-family: inherit;
+    border: 1px solid var(--hairline); color: var(--ink); background: transparent;
+    transition: all .12s ease;
+  }
+  .btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--page); }
+  .btn.primary:hover { opacity: .85; }
+
+  @media (max-width: 900px) {
+    main { padding: 16px 14px 40px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+    header { padding: 12px 14px; gap: 10px; }
+    .updated { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">🏠</div>
+    <div>
+      <h1>청약 캘린더</h1>
+      <div class="sub">서울 · 경기 공공임대</div>
+    </div>
+  </div>
+  <div class="seg" id="regionFilter">
+    <button data-r="" class="on">전체</button>
+    <button data-r="서울특별시">서울</button>
+    <button data-r="경기도">경기</button>
+  </div>
+  <div class="seg">
+    <button id="myToggle">⭐ 내 청약 <span id="myCount" class="cnt"></span></button>
+    <button id="newToggle">🆕 신규 <span id="newCount" class="cnt"></span></button>
+  </div>
+  <div class="spacer"></div>
+  <span class="updated" id="updated"></span>
+  <button id="refreshBtn" class="rbtn" hidden>🔄 갱신</button>
+  <button id="themeBtn" class="theme-btn" title="테마 전환"></button>
+  <div class="seg">
+    <button id="tabCal" class="on">캘린더</button>
+    <button id="tabMap">지도</button>
+  </div>
+</header>
+
+<main>
+  <div class="stats" id="stats"></div>
+
+  <div id="cal-view" class="grid">
+    <div class="card">
+      <div id="calendar"></div>
+      <div class="legend">
+        <span><i style="background:var(--seoul)"></i>서울</span>
+        <span><i style="background:var(--gyeonggi)"></i>경기</span>
+        <span><i style="background:var(--winner)"></i>당첨자 발표</span>
+      </div>
+    </div>
+    <div class="card panel">
+      <h3>📌 접수 마감 임박</h3>
+      <div class="due" id="dueList"></div>
+      <h3 style="margin-top:20px">🔄 상시 · 수시 모집</h3>
+      <div class="due" id="rollingList"></div>
+    </div>
+  </div>
+
+  <div id="map-view">
+    <div class="card">
+      <div id="map"><div class="map-placeholder">
+        <div class="big">🗺</div>
+        <div><b>지도 뷰 준비 중</b><br>
+        Kakao 지도 키 등록 후 활성화됩니다.<br>
+        <code>web/config.js</code>에 <code>window.KAKAO_JS_KEY = '...'</code> 추가</div>
+      </div></div>
+    </div>
+  </div>
+</main>
+
+<dialog id="dlg">
+  <div class="dlg-body">
+    <div class="chips" id="dlgChips"></div>
+    <h2 id="dlgTitle"></h2>
+    <div class="meta" id="dlgMeta"></div>
+    <div class="kv" id="dlgKv"></div>
+    <div class="my-box">
+      <div class="row-label">내 청약 관리</div>
+      <div class="status-seg" id="dlgStatus"></div>
+      <textarea id="dlgMemo" placeholder="메모 (예: 필요 서류, 순위 조건 확인 등)"></textarea>
+    </div>
+  </div>
+  <div class="dlg-actions">
+    <button class="btn" onclick="dlg.close()">닫기</button>
+    <a id="dlgLink" class="btn primary" target="_blank" rel="noopener">공고 원문 보기 ↗</a>
+  </div>
+</dialog>
+
+<dialog id="errDlg">
+  <div class="dlg-body">
+    <h2>⚠️ 공고 갱신에 실패했어요</h2>
+    <div class="meta" style="margin-top:8px; line-height:1.7">
+      잠시 후 다시 시도해주세요.<br>
+      지속적으로 문제가 발생하면 문의해주세요.
+    </div>
+  </div>
+  <div class="dlg-actions">
+    <button class="btn primary" onclick="errDlg.close()">확인</button>
+  </div>
+</dialog>
+
+<script>
+const DATA = window.NOTICES || { notices: [], updatedAt: '?', count: 0 };
+const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+const todayISO = TODAY.toLocaleDateString('sv-SE');
+let region = '';
+let myOnly = false;
+let newOnly = false;
+let calendar;
+const NATIVE = !!(window.webkit?.messageHandlers?.native);
+
+/* ── 테마 (시스템 → 라이트 → 다크 순환, localStorage 저장) ── */
+const THEME_KEY = 'cheongyak-theme';
+const THEME_ORDER = ['system', 'light', 'dark'];
+const THEME_ICON = { system: '🌗', light: '☀️', dark: '🌙' };
+function applyTheme(mode) {
+  const root = document.documentElement;
+  if (mode === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+  document.getElementById('themeBtn').textContent = THEME_ICON[mode];
+}
+let theme = localStorage.getItem(THEME_KEY) || 'system';
+applyTheme(theme);
+document.getElementById('themeBtn').onclick = () => {
+  theme = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme(theme);
+};
+
+/* ── 내 청약 저장소 (localStorage, 공고ID 기준) ── */
+const MY_KEY = 'cheongyak-my-v1';
+const STATUSES = ['관심', '신청완료', '서류제출', '당첨', '탈락'];
+const my = JSON.parse(localStorage.getItem(MY_KEY) || '{}');
+const saveMy = () => {
+  localStorage.setItem(MY_KEY, JSON.stringify(my));
+  updateMyCount();
+};
+const updateMyCount = () => {
+  const n = Object.keys(my).length;
+  document.getElementById('myCount').textContent = n ? `${n}` : '';
+};
+
+/* ── 갱신 상태 / 마지막 업데이트 표시 ── */
+const isNew = n => !!(DATA.recentNew && DATA.recentNew[n.id]);
+let refreshState = { refreshing: false, lastUpdatedAt: '', cooldownRemaining: 0, receivedAt: Date.now() };
+
+function fmtUpdated(iso) {
+  if (!iso) return `${DATA.updatedAt} 업데이트`;
+  const d = new Date(iso);
+  const hm = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const isToday = d.toLocaleDateString('sv-SE') === todayISO;
+  return (isToday ? `오늘 ${hm}` : `${d.getMonth() + 1}/${d.getDate()} ${hm}`) + ' 업데이트';
+}
+
+function renderRefreshUI() {
+  const label = document.getElementById('updated');
+  const btn = document.getElementById('refreshBtn');
+  label.textContent = fmtUpdated(refreshState.lastUpdatedAt || DATA.lastUpdatedAt);
+  if (!NATIVE) return;
+  btn.hidden = false;
+  const remain = Math.max(0, refreshState.cooldownRemaining
+    - Math.floor((Date.now() - refreshState.receivedAt) / 1000));
+  if (refreshState.refreshing) {
+    btn.disabled = true; btn.textContent = '⏳ 갱신 중…';
+  } else if (remain > 0) {
+    btn.disabled = true; btn.textContent = `🔄 ${Math.ceil(remain / 60)}분 후 가능`;
+  } else {
+    btn.disabled = false; btn.textContent = '🔄 갱신';
+  }
+}
+setInterval(renderRefreshUI, 30000);
+
+document.getElementById('refreshBtn').onclick = () =>
+  NATIVE && webkit.messageHandlers.native.postMessage({ action: 'refresh' });
+
+window.__onRefreshState = (s) => {
+  refreshState = { ...s, receivedAt: Date.now() };
+  renderRefreshUI();
+};
+window.__onRefreshError = () => errDlg.showModal();
+window.__applyData = (payload) => {
+  const hadNew = Object.keys(payload.recentNew || {})
+    .filter(id => !(DATA.recentNew || {})[id]).length;
+  Object.assign(DATA, payload);
+  refresh(); updateNewCount(); renderRefreshUI();
+  if (hadNew > 0) {
+    const cnt = document.getElementById('newCount');
+    cnt.classList.remove('pulse'); void cnt.offsetWidth; cnt.classList.add('pulse');
+  }
+};
+
+function updateNewCount() {
+  const n = Object.keys(DATA.recentNew || {}).length;
+  document.getElementById('newCount').textContent = n ? `${n}` : '';
+}
+renderRefreshUI();
+
+const seriesOf = n => n.region === '서울특별시'
+  ? { color: 'var(--seoul)', bg: 'var(--seoul-bg)' }
+  : { color: 'var(--gyeonggi)', bg: 'var(--gyeonggi-bg)' };
+
+const filtered = () => DATA.notices.filter(n =>
+  (!region || n.region === region) && (!myOnly || my[n.id]) && (!newOnly || isNew(n)));
+
+/* 일부 공고(예: 분양전환공공임대)는 청약접수 필드가 비어 있어
+   공고일~공고마감일(close)을 기간으로 폴백한다. */
+const effStart = n => n.dates.applyStart || n.dates.notice;
+const effEnd = n => n.dates.applyEnd || n.dates.close;
+
+/* 수시/상시 모집: 접수기간이 3주를 넘거나 제목에 수시·상시가 들어간 공고.
+   캘린더 막대로 그리면 매주 도배되므로 사이드 패널로 분리한다. */
+function isRolling(n) {
+  if (/수시|상시/.test(n.title)) return true;
+  const s = effStart(n), e = effEnd(n);
+  if (s && e) {
+    return (new Date(e) - new Date(s)) / 86400000 > 21;
+  }
+  return false;
+}
+
+function dday(iso) {
+  const diff = Math.round((new Date(iso + 'T00:00:00') - TODAY) / 86400000);
+  return diff === 0 ? 'D-DAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`;
+}
+function plusDay(iso) {
+  const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + 1);
+  return d.toLocaleDateString('sv-SE');
+}
+const fmtWon = v => v ? Number(v).toLocaleString('ko-KR') + '원' : '';
+const fmtRange = (a, b) => a ? `${a} ~ ${b || ''}` : '';
+
+/* ── 스탯 타일 ── */
+function renderStats() {
+  const ns = filtered();
+  const open = ns.filter(n => effStart(n) && effStart(n) <= todayISO
+                           && todayISO <= (effEnd(n) || effStart(n)));
+  const upcoming = ns.filter(n => effStart(n) && effStart(n) > todayISO);
+  const winSoon = ns.filter(n => n.dates.winner && n.dates.winner >= todayISO);
+  document.getElementById('stats').innerHTML = [
+    ['전체 공고', ns.length, '건', '수집된 모집공고'],
+    ['접수 중', open.length, '건', '오늘 신청 가능'],
+    ['접수 예정', upcoming.length, '건', '접수 시작 전'],
+    ['발표 대기', winSoon.length, '건', '당첨자 발표 예정'],
+  ].map(([l, v, u, h]) =>
+    `<div class="stat"><div class="label">${l}</div>
+     <div class="value">${v}<small>${u}</small></div>
+     <div class="hint">${h}</div></div>`).join('');
+}
+
+/* ── 마감 임박 패널 ── */
+function renderList(elId, items, { urgentBadge = true } = {}) {
+  const el = document.getElementById(elId);
+  if (!items.length) { el.innerHTML = '<div class="empty">해당하는 공고가 없어요</div>'; return; }
+  el.innerHTML = items.map((n, i) => {
+    const s = seriesOf(n);
+    const d = dday(effEnd(n));
+    const urgent = urgentBadge && (d === 'D-DAY' || (d.startsWith('D-') && +d.slice(2) <= 7));
+    return `<div class="due-item" data-i="${i}">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="t"><span class="name">${isNew(n) ? '<span class="nbadge">N</span>' : ''}${my[n.id] ? '⭐ ' : ''}${n.title}</span>
+      <span class="when">~ ${effEnd(n)} 마감 · ${n.source}</span></span>
+      <span class="dday ${urgent ? 'urgent' : ''}">${d}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.due-item').forEach(row =>
+    row.onclick = () => showDetail(items[+row.dataset.i]));
+}
+
+function renderDue() {
+  const open = n => effEnd(n) && effEnd(n) >= todayISO;
+  const byEnd = (a, b) => effEnd(a).localeCompare(effEnd(b));
+  renderList('dueList',
+    filtered().filter(n => open(n) && !isRolling(n)).sort(byEnd).slice(0, 8));
+  renderList('rollingList',
+    filtered().filter(n => open(n) && isRolling(n)).sort(byEnd).slice(0, 8),
+    { urgentBadge: false });
+}
+
+/* ── 캘린더 ── */
+function buildEvents() {
+  const evs = [];
+  for (const n of filtered()) {
+    const s = seriesOf(n), d = n.dates;
+    if (isRolling(n)) {
+      if (d.winner) {
+        evs.push({ title: n.title, start: d.winner,
+          backgroundColor: 'transparent', extendedProps: { notice: n, kind: 'winner' } });
+      }
+      continue;
+    }
+    if (effStart(n) && effEnd(n)) {
+      evs.push({ title: n.title, start: effStart(n), end: plusDay(effEnd(n)),
+        backgroundColor: 'transparent', extendedProps: { notice: n, kind: 'apply', s } });
+    } else if (d.notice) {
+      evs.push({ title: n.title, start: d.notice,
+        backgroundColor: 'transparent', extendedProps: { notice: n, kind: 'notice', s } });
+    }
+    if (d.winner) {
+      evs.push({ title: n.title, start: d.winner,
+        backgroundColor: 'transparent', extendedProps: { notice: n, kind: 'winner' } });
+    }
+  }
+  return evs;
+}
+
+function renderEvent(arg) {
+  const { kind, s } = arg.event.extendedProps;
+  const pinColor = kind === 'winner' ? 'var(--winner)' : s.color;
+  const bg = kind === 'apply' ? s.bg : kind === 'winner' ? 'var(--winner-bg)' : 'transparent';
+  const prefix = kind === 'winner' ? '발표 · ' : kind === 'notice' ? '공고 · ' : '';
+  const el = document.createElement('div');
+  el.className = 'ev';
+  el.style.cssText = `background:${bg};border-radius:6px;padding:2px 6px;width:100%;`;
+  const notice = arg.event.extendedProps.notice;
+  const star = my[notice.id] ? '⭐ ' : '';
+  const nbadge = isNew(notice) ? '<span class="nbadge">N</span>' : '';
+  el.innerHTML = `<span class="pin" style="background:${pinColor}"></span>
+                  <span class="txt">${nbadge}${star}${prefix}${arg.event.title}</span>`;
+  return { domNodes: [el] };
+}
+
+function initCalendar() {
+  calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+    initialView: 'dayGridMonth',
+    locale: 'ko',
+    height: 'auto',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+    buttonText: { today: '오늘', month: '월', list: '목록' },
+    titleFormat: { year: 'numeric', month: 'long' },
+    events: buildEvents(),
+    eventContent: renderEvent,
+    eventClick: info => showDetail(info.event.extendedProps.notice),
+    dayMaxEventRows: 4,
+    moreLinkContent: a => `+${a.num}건`,
+  });
+  calendar.render();
+}
+
+/* ── 상세 ── */
+function showDetail(n) {
+  const d = n.dates, c = n.complexes?.[0] || {};
+  const regionCls = n.region === '서울특별시' ? 'region-seoul' : 'region-gyeonggi';
+  const chips = [
+    isNew(n) && `<span class="chip" style="background:#4a3aa7;color:#fff">NEW</span>`,
+    `<span class="chip ${regionCls}">${n.region === '서울특별시' ? '서울' : '경기'}</span>`,
+    n.supplyType && `<span class="chip">${n.supplyType}</span>`,
+    n.status && `<span class="chip">${n.status}</span>`,
+    effEnd(n) && effEnd(n) >= todayISO && `<span class="chip dchip">마감 ${dday(effEnd(n))}</span>`,
+    `<span class="chip src">${n.source === 'LH' ? 'LH청약플러스' : '마이홈'} 제공</span>`,
+  ].filter(Boolean).join('');
+  document.getElementById('dlgChips').innerHTML = chips;
+  document.getElementById('dlgTitle').textContent = n.title;
+  document.getElementById('dlgMeta').textContent =
+    [n.institution, n.houseType, c.name].filter(Boolean).join(' · ');
+  const rows = [
+    ['공고일', d.notice], ['공고 마감', d.applyStart ? '' : d.close, true],
+    ['청약 접수', fmtRange(d.applyStart, d.applyEnd), true],
+    ['서류 접수', fmtRange(d.docStart, d.docEnd)],
+    ['당첨자 발표', d.winner, true], ['계약 기간', fmtRange(d.contractStart, d.contractEnd)],
+    ['주소', c.address], ['세대수', c.households && `${c.households}세대`],
+    ['전용면적', c.area && `${c.area}㎡`], ['입주예정', c.moveIn],
+    ['보증금', fmtWon(c.deposit)], ['월임대료', fmtWon(c.monthlyRent)],
+  ].filter(([, v]) => v);
+  document.getElementById('dlgKv').innerHTML = rows.map(([k, v, strong]) =>
+    `<div class="k">${k}</div><div class="v ${strong ? 'strong' : ''}">${v}</div>`).join('');
+  document.getElementById('dlgLink').href = n.url;
+  renderMyBox(n);
+  dlg.showModal();
+}
+
+/* ── 내 청약 관리 (상세 팝업 내) ── */
+function renderMyBox(n) {
+  const box = document.getElementById('dlgStatus');
+  const mine = my[n.id];
+  box.innerHTML = STATUSES.map(s =>
+    `<button data-s="${s}" class="${mine?.status === s ? 'on' : ''}">${s}</button>`).join('');
+  box.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+    const s = btn.dataset.s;
+    if (my[n.id]?.status === s) {
+      delete my[n.id];               // 같은 상태 다시 누르면 해제
+    } else {
+      my[n.id] = { ...(my[n.id] || {}), status: s, updatedAt: todayISO };
+    }
+    saveMy(); renderMyBox(n); refresh();
+  });
+  const memo = document.getElementById('dlgMemo');
+  memo.value = mine?.memo || '';
+  memo.oninput = () => {
+    if (!my[n.id]) my[n.id] = { status: '관심', updatedAt: todayISO };
+    my[n.id].memo = memo.value;
+    saveMy();
+  };
+}
+
+/* ── 필터 & 탭 ── */
+document.getElementById('regionFilter').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  region = btn.dataset.r;
+  document.querySelectorAll('#regionFilter button').forEach(b => b.classList.toggle('on', b === btn));
+  refresh();
+});
+function refresh() {
+  renderStats(); renderDue();
+  // 이벤트를 하나씩 addEvent하면 매번 전체 재렌더(160개 ≈ 1.4초).
+  // batchRendering으로 묶으면 한 번만 그린다 (≈ 24ms).
+  calendar.batchRendering(() => {
+    calendar.removeAllEvents();
+    buildEvents().forEach(ev => calendar.addEvent(ev));
+  });
+}
+
+document.getElementById('myToggle').onclick = e => {
+  myOnly = !myOnly;
+  e.currentTarget.classList.toggle('on', myOnly);
+  refresh();
+};
+document.getElementById('newToggle').onclick = e => {
+  newOnly = !newOnly;
+  e.currentTarget.classList.toggle('on', newOnly);
+  refresh();
+};
+
+const calView = document.getElementById('cal-view');
+const mapView = document.getElementById('map-view');
+document.getElementById('tabCal').onclick = e => switchTab(true, e.target);
+document.getElementById('tabMap').onclick = e => switchTab(false, e.target);
+function switchTab(showCal, btn) {
+  calView.style.display = showCal ? '' : 'none';
+  mapView.style.display = showCal ? 'none' : '';
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+}
+
+renderStats(); renderDue(); initCalendar(); updateMyCount(); updateNewCount();
+requestAnimationFrame(() => NATIVE && webkit.messageHandlers.native.postMessage({ action: 'rendered' }));
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
