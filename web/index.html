@@ -153,6 +153,19 @@
     font-family: inherit; display: grid; place-items: center; line-height: 1;
   }
   .theme-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  /* 목록 뷰 헤더에 실제로 보이는 월 선택 위젯 */
+  #mpick.shown {
+    display: inline-block; flex: 0 0 auto; width: auto; max-width: 150px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 5px 8px; font-family: inherit; font-size: 12.5px; font-weight: 600;
+    color-scheme: light dark;
+  }
+  #calendar .fc-toolbar-chunk:last-child { display: flex; justify-content: flex-end; }
+  :root[data-theme="dark"] #mpick.shown { color-scheme: dark; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) #mpick.shown { color-scheme: dark; }
+  }
   .rbtn {
     border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
     padding: 6px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
@@ -273,6 +286,11 @@
   .fc .fc-popover-body .fc-daygrid-event-harness { margin: 2px 0; }
   .fc .fc-list { border: none; }
   .fc .fc-list-day-cushion { background: color-mix(in srgb, var(--ink) 5%, transparent); font-weight: 700; }
+  .fc .fc-list-day.jump-hi .fc-list-day-cushion {
+    background: color-mix(in srgb, var(--seoul) 22%, transparent);
+    transition: background .3s ease;
+  }
+  .fc .fc-list-day { scroll-margin-top: 150px; }  /* 스티키 헤더에 가리지 않게 */
   .fc .fc-list-event:hover td { background: color-mix(in srgb, var(--ink) 5%, transparent); }
   .fc .fc-list-event td { border-color: var(--hairline); padding: 11px 12px; cursor: pointer; }
   .fc .fc-list-event-graphic, .fc .fc-list-event-dot { display: none; }  /* 우리 색점(.lpin) 사용 */
@@ -424,6 +442,7 @@
   </div>
 </header>
 
+<input type="date" id="mpick" aria-label="날짜로 이동" hidden>
 <main>
   <div class="stats" id="stats"></div>
 
@@ -720,16 +739,19 @@ function renderEvent(arg) {
 
 function initCalendar() {
   // 모바일에서는 셀이 좁아 제목이 안 보이므로 목록 뷰를 기본으로
-  const isMobile = window.matchMedia('(max-width: 560px)').matches;
+  const isMobile = new URLSearchParams(location.search).has('mobile')
+    || window.matchMedia('(max-width: 560px)').matches;
   calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
     initialView: isMobile ? 'listMonth' : 'dayGridMonth',
     locale: 'ko',
     height: 'auto',
-    // 모바일: 좁은 셀에 접수기간 막대가 겹쳐 항목이 안 보이므로 월간 토글 제거(목록 전용)
+    // 모바일: 월간 토글 대신 월 선택 위젯(헤더에 실제 배치), '오늘' 제거. 데스크톱은 기존 유지
     headerToolbar: isMobile
-      ? { left: 'prev,next today', center: 'title', right: '' }
+      ? { left: 'prev,next', center: 'title', right: 'monthSpacer' }
       : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+    customButtons: { monthSpacer: { text: '' } },
     buttonText: { today: '오늘', month: '월', list: '목록' },
+    datesSet: () => { if (isMobile) mountMonthField(); },
     titleFormat: { year: 'numeric', month: 'long' },
     events: buildEvents(),
     eventContent: renderEvent,
@@ -739,6 +761,45 @@ function initCalendar() {
     noEventsContent: '이 달에는 표시할 일정이 없어요',
   });
   calendar.render();
+
+  // 날짜 선택 → (필요 시 그 달로 이동한 뒤) 목록에서 해당 날짜 영역으로 스크롤
+  mpick.addEventListener('change', () => {
+    const val = mpick.value;             // YYYY-MM-DD
+    if (!val) return;
+    const target = new Date(val + 'T00:00:00');
+    const cur = calendar.getDate();
+    const sameMonth = target.getFullYear() === cur.getFullYear()
+      && target.getMonth() === cur.getMonth();
+    if (!sameMonth) calendar.gotoDate(val);
+    // gotoDate 후 목록이 다시 그려지므로 다음 프레임에 스크롤
+    requestAnimationFrame(() => setTimeout(() => scrollListToDate(val), 30));
+  });
+}
+
+// 목록에서 해당 날짜(없으면 그 이후 첫 날짜) 그룹으로 스크롤
+function scrollListToDate(val) {
+  const days = [...document.querySelectorAll('#calendar .fc-list-day')];
+  if (!days.length) return;
+  const el = days.find(d => d.dataset.date === val)
+    || days.find(d => d.dataset.date > val)
+    || days[days.length - 1];
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 잠깐 하이라이트
+  el?.classList.add('jump-hi');
+  setTimeout(() => el?.classList.remove('jump-hi'), 1200);
+}
+
+// 목록 뷰 헤더 우측에 날짜 선택 위젯을 실제로 배치 (툴바 리렌더에도 재부착)
+function mountMonthField() {
+  const chunk = document.querySelector('#calendar .fc-toolbar-chunk:last-child');
+  if (chunk && !chunk.contains(mpick)) {
+    mpick.hidden = false;
+    mpick.className = 'shown';
+    chunk.innerHTML = '';
+    chunk.appendChild(mpick);
+  }
+  const dt = calendar.getDate();
+  mpick.value = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
 /* ── 상세 ── */
