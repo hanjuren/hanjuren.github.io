@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>청약 캘린더 — 서울·경기 공공임대</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d0d">
@@ -84,7 +84,18 @@
     margin: 0; background: var(--page); color: var(--ink);
     font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
     font-size: 14px; line-height: 1.5;
+    overflow-x: hidden;              /* 가로 오버플로우 원천 차단 */
   }
+  /* FullCalendar 이벤트가 셀 폭을 밀어내 캘린더가 뷰포트를 넘는 것 방지.
+     table-layout:fixed로 7열을 항상 컨테이너에 균등 분할, 이벤트는 셀 안에서 클립 */
+  .fc .fc-scrollgrid-sync-table,
+  .fc .fc-col-header,
+  .fc .fc-daygrid-body,
+  .fc .fc-daygrid-body > table { width: 100% !important; }
+  .fc .fc-scrollgrid-sync-table,
+  .fc .fc-col-header { table-layout: fixed !important; }
+  .fc-daygrid-event-harness { max-width: 100%; }
+  .fc .fc-daygrid-day-events { overflow: hidden; }
 
   /* ── 헤더 ──────────────────────────────────────────────── */
   header {
@@ -317,6 +328,58 @@
     .grid { grid-template-columns: 1fr; }
     header { padding: 12px 14px; gap: 10px; }
     .updated { display: none; }
+  }
+
+  /* ── 모바일(폰) 전용 ─────────────────────────────────── */
+  @media (max-width: 560px) {
+    body { font-size: 13px; }
+    /* 아이폰 노치/홈바 safe-area */
+    header {
+      gap: 8px 6px;
+      padding: 10px 12px;
+      padding-top: max(10px, env(safe-area-inset-top));
+    }
+    main { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
+
+    .brand { flex: 1 1 100%; }        /* 브랜드는 첫 줄 독점 */
+    .brand .mark { width: 26px; height: 26px; font-size: 13px; }
+    .brand h1 { font-size: 15px; }
+    .brand .sub { font-size: 11px; }
+    .spacer { display: none; }         /* 필터/탭이 자연스럽게 흐르도록 */
+    .seg { padding: 2px; }
+    .seg button { padding: 7px 11px; font-size: 12px; }  /* 터치 타겟 유지 */
+    .theme-btn { width: 32px; height: 32px; }
+    .rbtn { padding: 7px 10px; font-size: 12px; }
+
+    /* 스탯 타일 압축 */
+    .stat { padding: 13px 14px; border-radius: 12px; }
+    .stat .value { font-size: 22px; }
+    .stat .label { font-size: 11.5px; }
+    .stat .hint { display: none; }
+    .stats { gap: 8px; }
+
+    .card { padding: 14px; border-radius: 14px; }
+
+    /* 캘린더 툴바/셀 축소 */
+    #calendar { font-size: 11px; }
+    .fc .fc-toolbar.fc-header-toolbar { margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+    .fc .fc-toolbar-title { font-size: 15px; }
+    .fc .fc-button { padding: 4px 8px; font-size: 11.5px; }
+    .fc .fc-col-header-cell-cushion { font-size: 10.5px; padding: 6px 2px; }
+    .fc .fc-daygrid-day-number { font-size: 11px; padding: 4px 5px; }
+    .ev .txt { font-size: 10px; }
+    .fc .fc-daygrid-more-link { font-size: 10px; }
+
+    /* 상세 다이얼로그 */
+    dialog { width: 94%; border-radius: 16px; }
+    .dlg-body { padding: 18px 18px 6px; }
+    .dlg-body h2 { font-size: 14.5px; }
+    .kv { grid-template-columns: 78px 1fr; font-size: 12.5px; }
+    .dlg-actions { padding: 14px 18px 18px; }
+
+    /* 마감 임박 리스트 */
+    .due-item { padding: 9px 10px; }
+    .due-item .t .name { font-size: 12px; }
   }
 </style>
 </head>
