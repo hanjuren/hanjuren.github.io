@@ -235,6 +235,7 @@ def main() -> None:
         "notices": sorted(merged, key=lambda n: n["dates"].get("notice", ""), reverse=True),
     }
     out_path = ROOT / "data" / "notices.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)  # 빈 data/는 git 미추적이라 없을 수 있음
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1))
     # 웹 UI가 file://로도 열리게 JS 래핑본도 생성
     (ROOT / "web" / "data.js").write_text(
