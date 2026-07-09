@@ -96,6 +96,12 @@
   .fc .fc-col-header { table-layout: fixed !important; }
   .fc-daygrid-event-harness { max-width: 100%; }
   .fc .fc-daygrid-day-events { overflow: hidden; }
+  /* 캘린더 내부 요소가 min-content(이벤트 막대 폭)로 뷰포트를 넘지 않게 강제 축소 */
+  .card, #calendar,
+  .fc, .fc-view-harness, .fc-scrollgrid, .fc-scrollgrid > *,
+  .fc-scrollgrid table, .fc-col-header-cell, .fc-daygrid-day,
+  .fc-daygrid-day-frame, .fc-daygrid-day-events,
+  .fc-daygrid-event-harness, .fc-daygrid-event, .ev { min-width: 0 !important; }
 
   /* ── 헤더 ──────────────────────────────────────────────── */
   header {
@@ -265,9 +271,15 @@
   .fc .fc-popover-close { color: var(--muted); opacity: 1; }
   .fc .fc-popover-body { padding: 6px 8px; max-height: 320px; overflow-y: auto; }
   .fc .fc-popover-body .fc-daygrid-event-harness { margin: 2px 0; }
-  .fc .fc-list { border-color: var(--hairline); }
-  .fc .fc-list-day-cushion { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .fc .fc-list { border: none; }
+  .fc .fc-list-day-cushion { background: color-mix(in srgb, var(--ink) 5%, transparent); font-weight: 700; }
   .fc .fc-list-event:hover td { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .fc .fc-list-event td { border-color: var(--hairline); padding: 11px 12px; cursor: pointer; }
+  .fc .fc-list-event-graphic, .fc .fc-list-event-dot { display: none; }  /* 우리 색점(.lpin) 사용 */
+  .fc .fc-list-event-time { display: none; }  /* 종일 일정이라 시간 불필요 */
+  .fc .fc-list-event-title { font-size: 13px; font-weight: 600; }
+  .fc-theme-standard .fc-list-day th { border-color: var(--hairline); }
+  .lpin { flex: none; width: 9px; height: 9px; border-radius: 3px; }
 
   .legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px;
             font-size: 12px; color: var(--ink-2); font-weight: 600; }
@@ -333,6 +345,7 @@
   /* ── 모바일(폰) 전용 ─────────────────────────────────── */
   @media (max-width: 560px) {
     body { font-size: 13px; }
+    .grid { grid-template-columns: minmax(0, 1fr); }  /* 1fr의 min-content 바닥 제거 */
     /* 아이폰 노치/홈바 safe-area */
     header {
       gap: 8px 6px;
@@ -680,23 +693,36 @@ function buildEvents() {
 
 function renderEvent(arg) {
   const { kind, s } = arg.event.extendedProps;
+  const notice = arg.event.extendedProps.notice;
   const pinColor = kind === 'winner' ? 'var(--winner)' : s.color;
-  const bg = kind === 'apply' ? s.bg : kind === 'winner' ? 'var(--winner-bg)' : 'transparent';
   const prefix = kind === 'winner' ? '발표 · ' : kind === 'notice' ? '공고 · ' : '';
+  const star = my[notice.id] ? '⭐ ' : '';
+  const nbadge = isNew(notice) ? '<span class="nbadge">N</span>' : '';
+
+  // 목록(list) 뷰: 제목이 다 보이도록 색점 + 접두 + 전체 제목
+  if (arg.view.type === 'listMonth') {
+    const el = document.createElement('span');
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;min-width:0';
+    el.innerHTML = `<span class="lpin" style="background:${pinColor}"></span>
+      <span style="min-width:0">${nbadge}${star}${prefix}${arg.event.title}</span>`;
+    return { domNodes: [el] };
+  }
+
+  // 월간 그리드 뷰: 틴트 막대
+  const bg = kind === 'apply' ? s.bg : kind === 'winner' ? 'var(--winner-bg)' : 'transparent';
   const el = document.createElement('div');
   el.className = 'ev';
   el.style.cssText = `background:${bg};border-radius:6px;padding:2px 6px;width:100%;`;
-  const notice = arg.event.extendedProps.notice;
-  const star = my[notice.id] ? '⭐ ' : '';
-  const nbadge = isNew(notice) ? '<span class="nbadge">N</span>' : '';
   el.innerHTML = `<span class="pin" style="background:${pinColor}"></span>
                   <span class="txt">${nbadge}${star}${prefix}${arg.event.title}</span>`;
   return { domNodes: [el] };
 }
 
 function initCalendar() {
+  // 모바일에서는 셀이 좁아 제목이 안 보이므로 목록 뷰를 기본으로
+  const isMobile = window.matchMedia('(max-width: 560px)').matches;
   calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-    initialView: 'dayGridMonth',
+    initialView: isMobile ? 'listMonth' : 'dayGridMonth',
     locale: 'ko',
     height: 'auto',
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
@@ -707,6 +733,7 @@ function initCalendar() {
     eventClick: info => showDetail(info.event.extendedProps.notice),
     dayMaxEventRows: 4,
     moreLinkContent: a => `+${a.num}건`,
+    noEventsContent: '이 달에는 표시할 일정이 없어요',
   });
   calendar.render();
 }
