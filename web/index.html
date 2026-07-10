@@ -645,8 +645,10 @@ const seriesOf = n => n.region === '서울특별시'
   ? { color: 'var(--seoul)', bg: 'var(--seoul-bg)' }
   : { color: 'var(--gyeonggi)', bg: 'var(--gyeonggi-bg)' };
 
+/* 일반 목록/캘린더: active 공고만 (정정으로 대체됐거나 수집기간을 벗어난 공고 제외).
+   내 청약 목록은 이력 보존을 위해 비활성 공고도 표시 (renderMyList) */
 const filtered = () => DATA.notices.filter(n =>
-  (!region || n.region === region) && (!myOnly || my[n.id]));
+  n.active !== false && (!region || n.region === region) && (!myOnly || my[n.id]));
 
 /* 일부 공고(예: 분양전환공공임대)는 청약접수 필드가 비어 있어
    공고일~공고마감일(close)을 기간으로 폴백한다. */
@@ -1085,6 +1087,27 @@ switchView(currentView);   // 초기 뷰 (폰=목록, 데스크톱=캘린더)
 const SUPABASE_URL = 'https://nknxzlrqffoqcbooghvb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0MNt1sJFr31SIllN1jK4GA_ttJaj1wN';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* 공고는 Supabase가 주 소스 (data.js는 오프라인/장애 폴백).
+   갱신이 배포와 분리되어 Actions cron이 DB만 업데이트하면 즉시 반영된다. */
+async function loadNoticesFromDB() {
+  try {
+    const { data: rows, error } = await sb.from('notices').select('*');
+    if (error || !rows || !rows.length) return;
+    DATA.notices = rows.map(r => ({
+      id: r.id, source: r.source, title: r.title, status: r.status,
+      institution: r.institution, supplyType: r.supply_type, houseType: r.house_type,
+      region: r.region, dates: r.dates || {}, complexes: r.complexes || [],
+      url: r.url, active: r.active !== false,
+    })).sort((a, b) => (b.dates.notice || '').localeCompare(a.dates.notice || ''));
+    DATA.count = DATA.notices.length;
+    DATA.updatedAt = rows.reduce((m, r) => r.updated_at > m ? r.updated_at : m, '').slice(0, 10)
+      || DATA.updatedAt;
+    document.getElementById('updated').textContent = `${DATA.updatedAt} 업데이트`;
+    refresh();
+  } catch (e) { console.error('공고 DB 로드 실패 (data.js 폴백 유지)', e); }
+}
+loadNoticesFromDB();
 const authBtn = document.getElementById('authBtn');
 
 authBtn.onclick = () => {

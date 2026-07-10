@@ -19,11 +19,26 @@ REGIONS = {"11": "서울특별시", "41": "경기도"}
 LH_EXCLUDE_UPP = {"01", "22", "02"}  # 토지, 상가, 기타
 
 
+def load_env() -> dict:
+    env = {}
+    try:
+        for line in (ROOT / ".env").read_text().splitlines():
+            if "=" in line and not line.startswith("#"):
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip()
+    except FileNotFoundError:
+        pass
+    import os
+    for k in ("DATA_GO_KR_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
+        env.setdefault(k, os.environ.get(k, ""))
+    return env
+
+
 def load_key() -> str:
-    for line in (ROOT / ".env").read_text().splitlines():
-        if line.startswith("DATA_GO_KR_KEY="):
-            return line.split("=", 1)[1].strip()
-    sys.exit(".env에 DATA_GO_KR_KEY가 없습니다")
+    key = load_env().get("DATA_GO_KR_KEY")
+    if not key:
+        sys.exit(".env에 DATA_GO_KR_KEY가 없습니다")
+    return key
 
 
 def get_json(url: str, params: dict, retries: int = 3):
@@ -200,6 +215,50 @@ def dedupe_corrections(notices: list[dict]) -> list[dict]:
     return list(groups.values())
 
 
+def push_supabase(notices: list[dict]) -> None:
+    """공고를 Supabase notices 테이블에 upsert하고, 이번 수집에 없는 행은 active=false.
+    (웹은 active 행만 일반 목록에 표시, 내 청약은 이력 보존을 위해 비활성도 표시)"""
+    env = load_env()
+    url, key = env.get("SUPABASE_URL"), env.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        print("Supabase 키 없음 → DB 업로드 건너뜀")
+        return
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    rows = [{
+        "id": n["id"], "source": n["source"], "title": n["title"], "status": n["status"],
+        "institution": n["institution"], "supply_type": n["supplyType"],
+        "house_type": n["houseType"], "region": n["region"],
+        "dates": n["dates"], "complexes": n["complexes"], "url": n["url"],
+        "active": True, "updated_at": now,
+    } for n in notices]
+
+    def req(method, path, body=None, prefer=None):
+        h = dict(headers)
+        if prefer:
+            h["Prefer"] = prefer
+        r = urllib.request.Request(
+            f"{url}/rest/v1/{path}", method=method, headers=h,
+            data=json.dumps(body).encode() if body is not None else None)
+        try:
+            with urllib.request.urlopen(r, timeout=30) as res:
+                return res.status
+        except urllib.error.HTTPError as e:
+            print(f"Supabase {method} {path.split('?')[0]} 실패: {e.code} {e.read().decode()[:300]}",
+                  file=sys.stderr)
+            raise
+
+    st = req("POST", "notices", rows, prefer="resolution=merge-duplicates")
+    ids = ",".join(n["id"] for n in notices)
+    req("PATCH", f"notices?id=not.in.({ids})", {"active": False})
+    print(f"Supabase 업로드 완료 (HTTP {st}, {len(rows)}건 upsert)")
+
+
 # ── 메인 ────────────────────────────────────────────────────
 
 def main() -> None:
@@ -237,10 +296,12 @@ def main() -> None:
     out_path = ROOT / "data" / "notices.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)  # 빈 data/는 git 미추적이라 없을 수 있음
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1))
-    # 웹 UI가 file://로도 열리게 JS 래핑본도 생성
+    # 웹 UI 오프라인 폴백용 JS 래핑본 (주 소스는 Supabase)
     (ROOT / "web" / "data.js").write_text(
         "window.NOTICES = " + json.dumps(out, ensure_ascii=False) + ";")
     print(f"완료: {len(merged)}건 → {out_path}")
+
+    push_supabase(merged)
 
 
 if __name__ == "__main__":

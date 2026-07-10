@@ -22,13 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # 개발 중 임시 비활성화 (완성 후 주석 해제 — 배포 시 최신 공고 수집)
+      # 개발 중 임시 비활성화 (완성 후 주석 해제 — 수집 후 Supabase notices 테이블에 upsert)
       # - uses: actions/setup-python@v5
       #   with:
       #     python-version: '3.12'
-      # - name: 공고 수집 (마이홈 + LH)
+      # - name: 공고 수집 (마이홈 + LH → Supabase)
       #   run: |
       #     echo "DATA_GO_KR_KEY=${{ secrets.DATA_GO_KR_KEY }}" > .env
+      #     echo "SUPABASE_URL=https://nknxzlrqffoqcbooghvb.supabase.co" >> .env
+      #     echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
       #     python3 collector/collect.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
