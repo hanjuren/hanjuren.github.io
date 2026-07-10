@@ -200,6 +200,10 @@
   .stat .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  /* 목록 뷰로 통일: 캘린더·마감임박 패널 숨기고 공고 리스트만 (모든 화면) */
+  #cal-view > .card:not(.mobile-list-card) { display: none; }
+  #cal-view { display: block; }
+  #mobileListCard { max-width: 760px; margin: 0 auto; }
   .card {
     background: var(--surface); border: 1px solid var(--ring); border-radius: 16px;
     box-shadow: var(--shadow); padding: 18px;
@@ -240,7 +244,7 @@
   .empty { padding: 20px 8px; text-align: center; color: var(--muted); font-size: 12.5px; }
 
   /* 모바일 공고 리스트 (진행중/마감 필터) */
-  .mobile-list-card { display: none; }
+  .mobile-list-card { display: block; }
   .lfilter { display: flex; gap: 6px; margin-bottom: 14px; }
   .lfilter button {
     flex: 1; padding: 9px; border: 1px solid var(--hairline); background: transparent;
@@ -376,10 +380,7 @@
   /* ── 모바일(폰) 전용 ─────────────────────────────────── */
   @media (max-width: 560px) {
     body { font-size: 13px; }
-    .grid { grid-template-columns: minmax(0, 1fr); }  /* 1fr의 min-content 바닥 제거 */
-    /* 모바일: 캘린더·마감임박 패널 숨기고 공고 리스트만 */
-    #cal-view > .card:not(.mobile-list-card) { display: none; }
-    .mobile-list-card { display: block; }
+    #mobileListCard { max-width: none; }   /* 폰에선 전체 폭 */
     /* 아이폰 노치/홈바 safe-area */
     header {
       gap: 8px 6px;
@@ -529,7 +530,8 @@ let region = '';
 let myOnly = false;
 let calendar;
 let session = null;   // Supabase 로그인 세션 (null = 비로그인)
-const IS_MOBILE = window.matchMedia('(max-width: 560px)').matches;
+const IS_MOBILE = true;   // 데스크톱·모바일 모두 목록 뷰로 통일
+const IS_PHONE = window.matchMedia('(max-width: 560px)').matches;
 const nowISO = () => new Date().toISOString();
 let listMode = 'open';      // 모바일 리스트 필터: open(진행중) | closed(마감)
 let sortMode = 'deadline';  // 진행중 정렬: deadline | deadlineDesc | notice
