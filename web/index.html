@@ -16,6 +16,7 @@
 </style>
 <script src="vendor/fullcalendar.min.js"></script>
 <script src="vendor/supabase.js"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=94059dd89cdb7da424da0638d4461d9c&autoload=false"></script>
 <script src="data.js"></script>
 <script src="config.js" onerror="void 0"></script>
 <style>
@@ -580,10 +581,13 @@
     <div class="card">
       <div id="map"><div class="map-placeholder">
         <div class="big">🗺</div>
-        <div><b>지도 뷰 준비 중</b><br>
-        Kakao 지도 키 등록 후 활성화됩니다.<br>
-        <code>web/config.js</code>에 <code>window.KAKAO_JS_KEY = '...'</code> 추가</div>
+        <div>지도를 불러오는 중…<br>(인터넷 연결이 필요해요)</div>
       </div></div>
+      <div class="legend">
+        <span><i style="background:var(--seoul)"></i>서울</span>
+        <span><i style="background:var(--gyeonggi)"></i>경기</span>
+        <span style="color:var(--muted)">핀을 누르면 공고 상세가 열려요 · 주소가 없는 공고(전세임대 등)는 표시되지 않아요</span>
+      </div>
     </div>
   </div>
 </main>
@@ -974,7 +978,8 @@ function refresh() {
   // 상태 칩은 '내 청약 관리(목록+myOnly)'에서만 — 다른 어떤 경로로 와도 숨김 보장
   document.getElementById('myChips').hidden = !(myOnly && currentView === 'list');
   if (currentView === 'list') { renderMobileList(); return; }
-  if (currentView !== 'calendar') return;   // 지도 뷰는 갱신할 것 없음
+  if (currentView === 'map') { renderMarkers(); return; }
+  if (currentView !== 'calendar') return;
   renderDue();
   if (!calendar) return;
   // 이벤트를 하나씩 addEvent하면 매번 전체 재렌더(160개 ≈ 1.4초).
@@ -1117,11 +1122,58 @@ const TABS = {
   map: document.getElementById('tabMap'),
 };
 const VIEW_DISPLAY = { calendar: 'grid', list: 'block', map: 'block' };
+/* ── 카카오 지도 ── */
+let kmap = null;
+let kmarkers = [];
+function initMap() {
+  if (kmap || !window.kakao?.maps) return;
+  kakao.maps.load(() => {
+    const el = document.getElementById('map');
+    el.innerHTML = '';
+    kmap = new kakao.maps.Map(el, {
+      center: new kakao.maps.LatLng(37.45, 127.0),   // 서울·경기 중간
+      level: 10,
+    });
+    renderMarkers();
+  });
+}
+
+// 지역색 원형 핀 (SVG 데이터 URI)
+function pinImage(color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="34" viewBox="0 0 26 34">
+    <path d="M13 0C5.8 0 0 5.8 0 13c0 9.6 13 21 13 21s13-11.4 13-21C26 5.8 20.2 0 13 0z" fill="${color}"/>
+    <circle cx="13" cy="13" r="5" fill="#fff"/></svg>`;
+  return new kakao.maps.MarkerImage(
+    'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+    new kakao.maps.Size(26, 34), { offset: new kakao.maps.Point(13, 34) });
+}
+
+function renderMarkers() {
+  if (!kmap) return;
+  kmarkers.forEach(m => m.setMap(null));
+  kmarkers = [];
+  const bounds = new kakao.maps.LatLngBounds();
+  filtered().forEach(n => {
+    const c = (n.complexes || []).find(x => x.lat && x.lng);
+    if (!c) return;
+    const pos = new kakao.maps.LatLng(c.lat, c.lng);
+    const color = n.region === '서울특별시' ? '#2a78d6' : '#1baf7a';
+    const mk = new kakao.maps.Marker({
+      position: pos, map: kmap, title: n.title, image: pinImage(color),
+    });
+    kakao.maps.event.addListener(mk, 'click', () => showDetail(n));
+    kmarkers.push(mk);
+    bounds.extend(pos);
+  });
+  if (kmarkers.length) kmap.setBounds(bounds);
+}
+
 function switchView(view) {
   currentView = view;
   Object.entries(VIEWS).forEach(([k, el]) => el.style.display = k === view ? VIEW_DISPLAY[k] : 'none');
   Object.entries(TABS).forEach(([k, el]) => el.classList.toggle('on', k === view));
   if (view === 'calendar' && !calendar) initCalendar();   // 캘린더는 처음 열 때 생성
+  if (view === 'map' && !kmap) initMap();                 // 지도도 처음 열 때 생성
   refresh();
 }
 document.getElementById('tabCal').onclick = () => switchView('calendar');

@@ -31,6 +31,7 @@ jobs:
       #     echo "DATA_GO_KR_KEY=${{ secrets.DATA_GO_KR_KEY }}" > .env
       #     echo "SUPABASE_URL=https://nknxzlrqffoqcbooghvb.supabase.co" >> .env
       #     echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
+      #     echo "KAKAO_REST_KEY=${{ secrets.KAKAO_REST_KEY }}" >> .env
       #     python3 collector/collect.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -215,6 +215,44 @@ def dedupe_corrections(notices: list[dict]) -> list[dict]:
     return list(groups.values())
 
 
+def geocode_notices(notices: list[dict]) -> None:
+    """공고별 첫 단지 주소를 카카오 지오코딩으로 좌표 변환 (지도 핀용).
+    주소 검색 실패 시 키워드 검색 폴백. 좌표는 complexes[0]에 lat/lng로 저장."""
+    key = load_env().get("KAKAO_REST_KEY")
+    if not key:
+        print("카카오 REST 키 없음 → 지오코딩 건너뜀")
+        return
+
+    def search(endpoint: str, query: str):
+        qs = urllib.parse.urlencode({"query": query, "size": 1})
+        req = urllib.request.Request(
+            f"https://dapi.kakao.com/v2/local/search/{endpoint}.json?{qs}",
+            headers={"Authorization": f"KakaoAK {key}"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                docs = json.load(r).get("documents") or []
+            if docs:
+                return float(docs[0]["y"]), float(docs[0]["x"])
+        except Exception:
+            pass
+        return None
+
+    ok = 0
+    for n in notices:
+        cxs = n.get("complexes") or []
+        target = next((c for c in cxs if c.get("address")), None)
+        if not target:
+            continue
+        pos = search("address", target["address"]) or search("keyword", target["address"])
+        if not pos and target.get("name"):
+            pos = search("keyword", target["name"])
+        if pos:
+            target["lat"], target["lng"] = pos
+            ok += 1
+        time.sleep(0.05)
+    print(f"지오코딩: {ok}건 좌표 확보")
+
+
 def push_supabase(notices: list[dict]) -> None:
     """공고를 Supabase notices 테이블에 upsert하고, 이번 수집에 없는 행은 active=false.
     (웹은 active 행만 일반 목록에 표시, 내 청약은 이력 보존을 위해 비활성도 표시)"""
@@ -283,6 +321,9 @@ def main() -> None:
 
     # 정정공고가 있으면 원공고는 대체된 것 → 같은 제목 그룹에서 최신 공고만 남긴다
     merged = dedupe_corrections(merged)
+
+    print("지오코딩(주소→좌표) 중...")
+    geocode_notices(merged)
     for n in merged:
         n.pop("lhPanId", None)
         n.pop("_detail_params", None)
