@@ -4,11 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>청약 캘린더 — 서울·경기 공공임대</title>
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d0d">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   @font-face {
     font-family: "Pretendard Variable";
@@ -19,6 +15,7 @@
   }
 </style>
 <script src="vendor/fullcalendar.min.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="data.js"></script>
 <script src="config.js" onerror="void 0"></script>
 <style>
@@ -75,8 +72,6 @@
       --critical: #d03b3b;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
     }
-    /* nbadge는 @media 기반이라 수동 라이트 강제 시 되돌린다 */
-    :root[data-theme="light"] .nbadge { background: #4a3aa7; color: #fff; }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -145,14 +140,20 @@
   }
   .seg button .cnt { color: var(--muted); font-weight: 700; }
   .seg button.on .cnt { color: var(--ink-2); }
-  .seg button .cnt.pulse { color: var(--critical); animation: pulse 1s ease 3; }
-  @keyframes pulse { 50% { opacity: .3; } }
   .theme-btn {
     border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
     width: 34px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 15px;
     font-family: inherit; display: grid; place-items: center; line-height: 1;
   }
   .theme-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .authbtn {
+    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
+    padding: 6px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit; white-space: nowrap; max-width: 160px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .authbtn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .authbtn.in { color: var(--ink); }
   /* 목록 뷰 헤더에 실제로 보이는 월 선택 위젯 */
   #mpick.shown {
     display: inline-block; flex: 0 0 auto; width: auto; max-width: 150px;
@@ -165,22 +166,6 @@
   :root[data-theme="dark"] #mpick.shown { color-scheme: dark; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) #mpick.shown { color-scheme: dark; }
-  }
-  .rbtn {
-    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
-    padding: 6px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
-    cursor: pointer; font-family: inherit; white-space: nowrap;
-  }
-  .rbtn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 5%, transparent); }
-  .rbtn:disabled { opacity: .55; cursor: default; }
-  .nbadge {
-    display: inline-block; font-size: 9.5px; font-weight: 800; line-height: 1;
-    padding: 2.5px 4.5px; border-radius: 5px; vertical-align: 1px; margin-right: 4px;
-    background: #4a3aa7; color: #fff;
-  }
-  :root[data-theme="dark"] .nbadge { background: #9085e9; color: #1a1a19; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .nbadge { background: #9085e9; color: #1a1a19; }
   }
   .status-seg { display: flex; gap: 5px; flex-wrap: wrap; }
   .status-seg button {
@@ -235,11 +220,23 @@
     overflow: hidden; text-overflow: ellipsis;
   }
   .due-item .t .when { display: block; font-size: 11px; color: var(--muted); }
+  .stb {
+    display: inline-block; font-size: 10px; font-weight: 800; line-height: 1;
+    padding: 2px 6px; border-radius: 5px; margin-right: 5px; vertical-align: 1px;
+  }
+  .stb.open { background: color-mix(in srgb, #0ca30c 20%, transparent); color: #0ca30c; }
+  .stb.soon { background: color-mix(in srgb, var(--ink) 9%, transparent); color: var(--ink-2); }
   .dday {
     flex: none; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
     background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink-2);
   }
   .dday.urgent { background: color-mix(in srgb, var(--critical) 14%, transparent); color: var(--critical); }
+  .due-item .fav {
+    flex: none; background: none; border: none; cursor: pointer; padding: 4px;
+    font-size: 18px; line-height: 1; color: var(--muted); transition: transform .12s ease;
+  }
+  .due-item .fav.on { color: var(--winner); }
+  .due-item .fav:active { transform: scale(1.35); }
   .empty { padding: 20px 8px; text-align: center; color: var(--muted); font-size: 12.5px; }
 
   /* 모바일 공고 리스트 (진행중/마감 필터) */
@@ -251,6 +248,12 @@
     font-family: inherit; cursor: pointer;
   }
   .lfilter button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .listctl { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .listctl select {
+    background: transparent; color: var(--ink-2);
+    border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 8px;
+    font-family: inherit; font-size: 12px; font-weight: 600; color-scheme: light dark;
+  }
 
   /* ── FullCalendar 리스타일 ─────────────────────────────── */
   #calendar { --fc-border-color: var(--hairline); --fc-page-bg-color: transparent;
@@ -393,7 +396,6 @@
     .seg { padding: 2px; }
     .seg button { padding: 7px 11px; font-size: 12px; }  /* 터치 타겟 유지 */
     .theme-btn { width: 32px; height: 32px; }
-    .rbtn { padding: 7px 10px; font-size: 12px; }
 
     /* 스탯 타일 압축 */
     .stat { padding: 13px 14px; border-radius: 12px; }
@@ -443,11 +445,10 @@
   </div>
   <div class="seg">
     <button id="myToggle">⭐ 내 청약 <span id="myCount" class="cnt"></span></button>
-    <button id="newToggle">🆕 신규 <span id="newCount" class="cnt"></span></button>
   </div>
   <div class="spacer"></div>
   <span class="updated" id="updated"></span>
-  <button id="refreshBtn" class="rbtn" hidden>🔄 갱신</button>
+  <button id="authBtn" class="authbtn">로그인</button>
   <button id="themeBtn" class="theme-btn" title="테마 전환"></button>
   <div class="seg">
     <button id="tabCal" class="on">캘린더</button>
@@ -478,6 +479,13 @@
       <div class="lfilter" id="listFilter">
         <button data-f="open" class="on">진행 중</button>
         <button data-f="closed">마감</button>
+      </div>
+      <div class="listctl" id="listCtl">
+        <select id="sortSel" aria-label="정렬">
+          <option value="deadline">마감 임박순</option>
+          <option value="deadlineDesc">마감 여유순</option>
+          <option value="notice">최신 공고순</option>
+        </select>
       </div>
       <div class="due" id="mobileList"></div>
     </div>
@@ -513,30 +521,18 @@
   </div>
 </dialog>
 
-<dialog id="errDlg">
-  <div class="dlg-body">
-    <h2>⚠️ 공고 갱신에 실패했어요</h2>
-    <div class="meta" style="margin-top:8px; line-height:1.7">
-      잠시 후 다시 시도해주세요.<br>
-      지속적으로 문제가 발생하면 문의해주세요.
-    </div>
-  </div>
-  <div class="dlg-actions">
-    <button class="btn primary" onclick="errDlg.close()">확인</button>
-  </div>
-</dialog>
-
 <script>
 const DATA = window.NOTICES || { notices: [], updatedAt: '?', count: 0 };
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 const todayISO = TODAY.toLocaleDateString('sv-SE');
 let region = '';
 let myOnly = false;
-let newOnly = false;
 let calendar;
-const NATIVE = !!(window.webkit?.messageHandlers?.native);
+let session = null;   // Supabase 로그인 세션 (null = 비로그인)
 const IS_MOBILE = window.matchMedia('(max-width: 560px)').matches;
-let listMode = 'open';   // 모바일 리스트 필터: open(진행중) | closed(마감)
+const nowISO = () => new Date().toISOString();
+let listMode = 'open';      // 모바일 리스트 필터: open(진행중) | closed(마감)
+let sortMode = 'deadline';  // 진행중 정렬: deadline | deadlineDesc | notice
 
 /* ── 테마 (시스템 → 라이트 → 다크 순환, localStorage 저장) ── */
 const THEME_KEY = 'cheongyak-theme';
@@ -569,67 +565,16 @@ const updateMyCount = () => {
   document.getElementById('myCount').textContent = n ? `${n}` : '';
 };
 
-/* ── 갱신 상태 / 마지막 업데이트 표시 ── */
-const isNew = n => !!(DATA.recentNew && DATA.recentNew[n.id]);
-let refreshState = { refreshing: false, lastUpdatedAt: '', cooldownRemaining: 0, receivedAt: Date.now() };
-
-function fmtUpdated(iso) {
-  if (!iso) return `${DATA.updatedAt} 업데이트`;
-  const d = new Date(iso);
-  const hm = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const isToday = d.toLocaleDateString('sv-SE') === todayISO;
-  return (isToday ? `오늘 ${hm}` : `${d.getMonth() + 1}/${d.getDate()} ${hm}`) + ' 업데이트';
-}
-
-function renderRefreshUI() {
-  const label = document.getElementById('updated');
-  const btn = document.getElementById('refreshBtn');
-  label.textContent = fmtUpdated(refreshState.lastUpdatedAt || DATA.lastUpdatedAt);
-  if (!NATIVE) return;
-  btn.hidden = false;
-  const remain = Math.max(0, refreshState.cooldownRemaining
-    - Math.floor((Date.now() - refreshState.receivedAt) / 1000));
-  if (refreshState.refreshing) {
-    btn.disabled = true; btn.textContent = '⏳ 갱신 중…';
-  } else if (remain > 0) {
-    btn.disabled = true; btn.textContent = `🔄 ${Math.ceil(remain / 60)}분 후 가능`;
-  } else {
-    btn.disabled = false; btn.textContent = '🔄 갱신';
-  }
-}
-setInterval(renderRefreshUI, 30000);
-
-document.getElementById('refreshBtn').onclick = () =>
-  NATIVE && webkit.messageHandlers.native.postMessage({ action: 'refresh' });
-
-window.__onRefreshState = (s) => {
-  refreshState = { ...s, receivedAt: Date.now() };
-  renderRefreshUI();
-};
-window.__onRefreshError = () => errDlg.showModal();
-window.__applyData = (payload) => {
-  const hadNew = Object.keys(payload.recentNew || {})
-    .filter(id => !(DATA.recentNew || {})[id]).length;
-  Object.assign(DATA, payload);
-  refresh(); updateNewCount(); renderRefreshUI();
-  if (hadNew > 0) {
-    const cnt = document.getElementById('newCount');
-    cnt.classList.remove('pulse'); void cnt.offsetWidth; cnt.classList.add('pulse');
-  }
-};
-
-function updateNewCount() {
-  const n = Object.keys(DATA.recentNew || {}).length;
-  document.getElementById('newCount').textContent = n ? `${n}` : '';
-}
-renderRefreshUI();
+/* ── 마지막 업데이트 표시 (GitHub Actions가 하루 2회 자동 갱신) ── */
+document.getElementById('updated').textContent =
+  DATA.updatedAt ? `${DATA.updatedAt} 업데이트` : '';
 
 const seriesOf = n => n.region === '서울특별시'
   ? { color: 'var(--seoul)', bg: 'var(--seoul-bg)' }
   : { color: 'var(--gyeonggi)', bg: 'var(--gyeonggi-bg)' };
 
 const filtered = () => DATA.notices.filter(n =>
-  (!region || n.region === region) && (!myOnly || my[n.id]) && (!newOnly || isNew(n)));
+  (!region || n.region === region) && (!myOnly || my[n.id]));
 
 /* 일부 공고(예: 분양전환공공임대)는 청약접수 필드가 비어 있어
    공고일~공고마감일(close)을 기간으로 폴백한다. */
@@ -657,6 +602,16 @@ function plusDay(iso) {
 }
 const fmtWon = v => v ? Number(v).toLocaleString('ko-KR') + '원' : '';
 const fmtRange = (a, b) => a ? `${a} ~ ${b || ''}` : '';
+const fmtMD = iso => { const p = iso.split('-'); return `${+p[1]}/${+p[2]}`; };
+
+/* 공고의 접수 상태: 접수중 / 접수예정(시작일) / 마감 */
+function applyState(n) {
+  const s = n.dates.applyStart, e = effEnd(n);
+  if (!e) return null;
+  if (e < todayISO) return { cls: 'closed', label: '마감' };
+  if (s && s > todayISO) return { cls: 'soon', label: `${fmtMD(s)} 접수시작` };
+  return { cls: 'open', label: '접수중' };
+}
 
 /* ── 스탯 타일 ── */
 function renderStats() {
@@ -684,15 +639,28 @@ function renderList(elId, items, { urgentBadge = true } = {}) {
     const s = seriesOf(n);
     const d = dday(effEnd(n));
     const urgent = urgentBadge && (d === 'D-DAY' || (d.startsWith('D-') && +d.slice(2) <= 7));
+    const fav = !!my[n.id];
+    const st = applyState(n);
+    const badge = st && st.cls !== 'closed' ? `<span class="stb ${st.cls}">${st.label}</span>` : '';
     return `<div class="due-item" data-i="${i}">
+      <button class="fav ${fav ? 'on' : ''}" data-i="${i}" aria-label="즐겨찾기">${fav ? '★' : '☆'}</button>
       <span class="dot" style="background:${s.color}"></span>
-      <span class="t"><span class="name">${isNew(n) ? '<span class="nbadge">N</span>' : ''}${my[n.id] ? '⭐ ' : ''}${n.title}</span>
-      <span class="when">~ ${effEnd(n)} 마감 · ${n.source}</span></span>
+      <span class="t"><span class="name">${n.title}</span>
+      <span class="when">${badge}~ ${effEnd(n)} 마감 · ${n.source}</span></span>
       <span class="dday ${urgent ? 'urgent' : ''}">${d}</span>
     </div>`;
   }).join('');
   el.querySelectorAll('.due-item').forEach(row =>
     row.onclick = () => showDetail(items[+row.dataset.i]));
+  el.querySelectorAll('.fav').forEach(btn =>
+    btn.onclick = e => { e.stopPropagation(); toggleFav(items[+btn.dataset.i]); });
+}
+
+// 즐겨찾기 토글 = '관심' 상태로 등록/해제 (내 청약 저장소 재활용)
+function toggleFav(n) {
+  if (my[n.id]) { delete my[n.id]; saveMy(); remoteDelete(n.id); }
+  else { my[n.id] = { status: '관심', updatedAt: nowISO() }; saveMy(); remoteUpsert(n.id); }
+  refresh();
 }
 
 function renderDue() {
@@ -738,14 +706,13 @@ function renderEvent(arg) {
   const pinColor = kind === 'winner' ? 'var(--winner)' : s.color;
   const prefix = kind === 'winner' ? '발표 · ' : kind === 'notice' ? '공고 · ' : '';
   const star = my[notice.id] ? '⭐ ' : '';
-  const nbadge = isNew(notice) ? '<span class="nbadge">N</span>' : '';
 
   // 목록(list) 뷰: 제목이 다 보이도록 색점 + 접두 + 전체 제목
   if (arg.view.type === 'listMonth') {
     const el = document.createElement('span');
     el.style.cssText = 'display:flex;align-items:center;gap:8px;min-width:0';
     el.innerHTML = `<span class="lpin" style="background:${pinColor}"></span>
-      <span style="min-width:0">${nbadge}${star}${prefix}${arg.event.title}</span>`;
+      <span style="min-width:0">${star}${prefix}${arg.event.title}</span>`;
     return { domNodes: [el] };
   }
 
@@ -755,7 +722,7 @@ function renderEvent(arg) {
   el.className = 'ev';
   el.style.cssText = `background:${bg};border-radius:6px;padding:2px 6px;width:100%;`;
   el.innerHTML = `<span class="pin" style="background:${pinColor}"></span>
-                  <span class="txt">${nbadge}${star}${prefix}${arg.event.title}</span>`;
+                  <span class="txt">${star}${prefix}${arg.event.title}</span>`;
   return { domNodes: [el] };
 }
 
@@ -828,7 +795,6 @@ function showDetail(n) {
   const d = n.dates, c = n.complexes?.[0] || {};
   const regionCls = n.region === '서울특별시' ? 'region-seoul' : 'region-gyeonggi';
   const chips = [
-    isNew(n) && `<span class="chip" style="background:#4a3aa7;color:#fff">NEW</span>`,
     `<span class="chip ${regionCls}">${n.region === '서울특별시' ? '서울' : '경기'}</span>`,
     n.supplyType && `<span class="chip">${n.supplyType}</span>`,
     n.status && `<span class="chip">${n.status}</span>`,
@@ -864,18 +830,22 @@ function renderMyBox(n) {
   box.querySelectorAll('button').forEach(btn => btn.onclick = () => {
     const s = btn.dataset.s;
     if (my[n.id]?.status === s) {
-      delete my[n.id];               // 같은 상태 다시 누르면 해제
+      delete my[n.id]; saveMy(); remoteDelete(n.id);   // 같은 상태 다시 누르면 해제
     } else {
-      my[n.id] = { ...(my[n.id] || {}), status: s, updatedAt: todayISO };
+      my[n.id] = { ...(my[n.id] || {}), status: s, updatedAt: nowISO() };
+      saveMy(); remoteUpsert(n.id);
     }
-    saveMy(); renderMyBox(n); refresh();
+    renderMyBox(n); refresh();
   });
   const memo = document.getElementById('dlgMemo');
   memo.value = mine?.memo || '';
   memo.oninput = () => {
-    if (!my[n.id]) my[n.id] = { status: '관심', updatedAt: todayISO };
+    if (!my[n.id]) my[n.id] = { status: '관심' };
     my[n.id].memo = memo.value;
+    my[n.id].updatedAt = nowISO();
     saveMy();
+    clearTimeout(memo._t);
+    memo._t = setTimeout(() => remoteUpsert(n.id), 700);   // 타이핑 멈추면 동기화
   };
 }
 
@@ -898,15 +868,21 @@ function refresh() {
   });
 }
 
-/* 모바일 공고 리스트: 공고 1건 1행, 진행중/마감 필터 */
+/* 정렬 함수 (effEnd 없는 공고는 뒤로) */
+const SORT_FNS = {
+  deadline: (a, b) => (effEnd(a) || 'zzzz').localeCompare(effEnd(b) || 'zzzz'),      // 마감 임박순
+  deadlineDesc: (a, b) => (effEnd(b) || '').localeCompare(effEnd(a) || ''),          // 마감 여유순
+  notice: (a, b) => (b.dates.notice || '').localeCompare(a.dates.notice || ''),      // 최신 공고순
+};
+
+/* 모바일 공고 리스트: 공고 1건 1행, 진행중/마감 필터 + 정렬 */
 function renderMobileList() {
   const isOpen = n => effEnd(n) && effEnd(n) >= todayISO;
   const items = filtered()
-    .filter(n => listMode === 'open' ? isOpen(n) : (effEnd(n) && effEnd(n) < todayISO))
-    .sort((a, b) => {
-      const ea = effEnd(a) || '', eb = effEnd(b) || '';
-      return listMode === 'open' ? ea.localeCompare(eb) : eb.localeCompare(ea);
-    });
+    .filter(n => listMode === 'open' ? isOpen(n) : (effEnd(n) && effEnd(n) < todayISO));
+  // 진행중: 선택한 정렬 / 마감: 최근 마감순 고정
+  items.sort(listMode === 'open' ? SORT_FNS[sortMode] : SORT_FNS.deadlineDesc);
+  document.getElementById('sortSel').style.display = listMode === 'open' ? '' : 'none';
   renderList('mobileList', items, { urgentBadge: listMode === 'open' });
 }
 
@@ -917,14 +893,13 @@ document.getElementById('listFilter').addEventListener('click', e => {
   renderMobileList();
 });
 
+document.getElementById('sortSel').addEventListener('change', e => {
+  sortMode = e.target.value; renderMobileList();
+});
+
 document.getElementById('myToggle').onclick = e => {
   myOnly = !myOnly;
   e.currentTarget.classList.toggle('on', myOnly);
-  refresh();
-};
-document.getElementById('newToggle').onclick = e => {
-  newOnly = !newOnly;
-  e.currentTarget.classList.toggle('on', newOnly);
   refresh();
 };
 
@@ -938,7 +913,7 @@ function switchTab(showCal, btn) {
   btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
 }
 
-renderStats(); updateMyCount(); updateNewCount();
+renderStats(); updateMyCount();
 if (IS_MOBILE) {
   document.getElementById('tabCal').textContent = '목록';
   renderMobileList();
@@ -946,11 +921,88 @@ if (IS_MOBILE) {
   renderDue();
   initCalendar();
 }
-requestAnimationFrame(() => NATIVE && webkit.messageHandlers.native.postMessage({ action: 'rendered' }));
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('sw.js');
+/* ── Supabase 동기화 (로그인 시 여러 기기에서 내 청약 공유) ── */
+const SUPABASE_URL = 'https://nknxzlrqffoqcbooghvb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0MNt1sJFr31SIllN1jK4GA_ttJaj1wN';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const authBtn = document.getElementById('authBtn');
+
+authBtn.onclick = () => {
+  if (session) sb.auth.signOut();
+  else sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: location.origin + location.pathname },
+  });
+};
+
+function updateAuthUI() {
+  if (session) {
+    authBtn.textContent = '👤 ' + (session.user.email || '로그인됨');
+    authBtn.classList.add('in');
+    authBtn.title = '클릭하면 로그아웃';
+  } else {
+    authBtn.textContent = '로그인';
+    authBtn.classList.remove('in');
+    authBtn.title = '구글 로그인 (여러 기기 동기화)';
+  }
 }
+
+// 개별 공고 원격 저장/삭제 (비로그인 시 아무것도 안 함)
+async function remoteUpsert(id) {
+  if (!session) return;
+  const r = my[id]; if (!r) return;
+  const { error } = await sb.from('my_notices').upsert({
+    user_id: session.user.id, notice_id: id,
+    status: r.status || null, memo: r.memo || null, updated_at: r.updatedAt || nowISO(),
+  });
+  if (error) console.error('upsert 실패', error);
+}
+async function remoteDelete(id) {
+  if (!session) return;
+  const { error } = await sb.from('my_notices').delete().eq('notice_id', id);
+  if (error) console.error('delete 실패', error);
+}
+
+// 로그인 시: 원격 데이터를 불러와 로컬과 병합 (각 공고는 updatedAt 최신 우선)
+async function syncOnLogin() {
+  const { data: rows, error } = await sb.from('my_notices').select('*');
+  if (error) { console.error('동기화 실패', error); return; }
+  const remote = {};
+  (rows || []).forEach(r => remote[r.notice_id] = {
+    status: r.status || '관심', memo: r.memo || '', updatedAt: r.updated_at,
+  });
+  const ids = new Set([...Object.keys(my), ...Object.keys(remote)]);
+  const toPush = [];
+  ids.forEach(id => {
+    const l = my[id], r = remote[id];
+    if (l && r) {
+      if (new Date(l.updatedAt || 0) > new Date(r.updatedAt || 0)) toPush.push(id);
+      else my[id] = r;
+    } else if (l) toPush.push(id);   // 로컬에만 있음 → 업로드
+    else my[id] = r;                 // 원격에만 있음 → 로컬로
+  });
+  if (toPush.length) {
+    await sb.from('my_notices').upsert(toPush.map(id => ({
+      user_id: session.user.id, notice_id: id,
+      status: my[id].status || null, memo: my[id].memo || null,
+      updated_at: my[id].updatedAt || nowISO(),
+    })));
+  }
+  localStorage.setItem(MY_KEY, JSON.stringify(my));
+  updateMyCount(); refresh();
+}
+
+sb.auth.onAuthStateChange((event, sess) => {
+  session = sess;
+  updateAuthUI();
+  if (event === 'SIGNED_IN') syncOnLogin();
+});
+sb.auth.getSession().then(({ data }) => {
+  session = data.session;
+  updateAuthUI();
+  if (session) syncOnLogin();
+});
 </script>
 </body>
 </html>
