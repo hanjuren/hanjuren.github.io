@@ -921,6 +921,8 @@ document.getElementById('regionFilter').addEventListener('click', e => {
 });
 function refresh() {
   renderStats();
+  // 상태 칩은 '내 청약 관리(목록+myOnly)'에서만 — 다른 어떤 경로로 와도 숨김 보장
+  document.getElementById('myChips').hidden = !(myOnly && currentView === 'list');
   if (currentView === 'list') { renderMobileList(); return; }
   if (currentView !== 'calendar') return;   // 지도 뷰는 갱신할 것 없음
   renderDue();
