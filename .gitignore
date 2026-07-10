@@ -10,3 +10,6 @@ macapp/dist/
 
 # 빌드 시 생성되는 키 파일
 macapp/Sources/CheongyakCal/Secrets.swift
+
+# 로컬 미리보기 서버 (배포 제외)
+web/_serve.py

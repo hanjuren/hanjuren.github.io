@@ -36,6 +36,8 @@
     --winner-bg:   rgba(237,161,0,.15);
     --critical: #d03b3b;
     --shadow: 0 1px 2px rgba(11,11,11,.04), 0 8px 24px rgba(11,11,11,.05);
+    --seg-on: #fcfcfb;
+    --seg-sh: 0 1px 2px rgba(11,11,11,.04), 0 8px 24px rgba(11,11,11,.05);
   }
   :root[data-theme="dark"] {
     --page:     #0d0d0d;
@@ -53,6 +55,8 @@
     --winner-bg:   rgba(201,133,0,.20);
     --critical: #d03b3b;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --seg-on: #4a4a48;
+    --seg-sh: none;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -71,6 +75,8 @@
       --winner-bg:   rgba(201,133,0,.20);
       --critical: #d03b3b;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      --seg-on: #4a4a48;
+      --seg-sh: none;
     }
   }
   * { box-sizing: border-box; }
@@ -127,18 +133,8 @@
     padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
     font-family: inherit; transition: all .15s ease;
   }
-  /* 선택 상태: 라이트=흰 서피스+그림자, 다크=밝은 틴트 (지역/내청약/신규 공통) */
-  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
-  :root[data-theme="dark"] .seg button.on {
-    background: color-mix(in srgb, var(--ink) 20%, var(--surface));
-    box-shadow: none;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .seg button.on {
-      background: color-mix(in srgb, var(--ink) 20%, var(--surface));
-      box-shadow: none;
-    }
-  }
+  /* 선택 상태 (색은 테마 토큰 --seg-on/--seg-sh로 — 복합 셀렉터는 WebKit 재계산 버그 유발) */
+  .seg button.on { background: var(--seg-on); color: var(--ink); box-shadow: var(--seg-sh); }
   .seg button .cnt { color: var(--muted); font-weight: 700; }
   .seg button.on .cnt { color: var(--ink-2); }
   .theme-btn {
@@ -258,6 +254,40 @@
     font-family: inherit; cursor: pointer;
   }
   .lfilter button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+
+  /* ── 내 청약 관리 모드 ── */
+  .mychips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .mychips button {
+    border: 1px solid var(--hairline); background: transparent; color: var(--ink-2);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .mychips button.on { border-color: var(--ink); background: var(--ink); color: var(--page); }
+  /* 상태별 색 (검증 팔레트: yellow/blue/violet/good/muted) */
+  .st-interest { --st: #eda100; }
+  .st-applied  { --st: #2a78d6; }
+  .st-docs     { --st: #4a3aa7; }
+  .st-won      { --st: #0ca30c; }
+  .st-lost     { --st: #898781; }
+  :root[data-theme="dark"] .st-applied { --st: #3987e5; }
+  :root[data-theme="dark"] .st-docs { --st: #9085e9; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .st-applied { --st: #3987e5; }
+    :root:not([data-theme="light"]) .st-docs { --st: #9085e9; }
+  }
+  .mychips button.st:not(.on) { color: var(--st); border-color: color-mix(in srgb, var(--st) 45%, transparent); }
+  .mychips button.st.on { background: var(--st); border-color: var(--st); color: #fff; }
+  /* 행 내 상태 변경 셀렉트 (배지처럼 보이게) */
+  .stsel {
+    flex: none; appearance: none; -webkit-appearance: none;
+    border: none; border-radius: 7px; padding: 4px 8px;
+    font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer;
+    background: color-mix(in srgb, var(--st) 16%, transparent); color: var(--st);
+  }
+  .memoprev {
+    display: block; font-size: 11.5px; color: var(--ink-2); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .listctl { display: flex; justify-content: flex-end; margin-bottom: 12px; }
   .listctl select {
     background: transparent; color: var(--ink-2);
@@ -495,6 +525,7 @@
 
   <div id="list-view">
     <div class="card mobile-list-card" id="mobileListCard">
+      <div class="mychips" id="myChips" hidden></div>
       <div class="lfilter" id="listFilter">
         <button data-f="open" class="on">진행 중</button>
         <button data-f="closed">마감</button>
@@ -574,6 +605,22 @@ document.getElementById('themeBtn').onclick = () => {
 
 /* ── 내 청약 (로그인 시에만, Supabase에만 저장 — 로컬 저장 안 함) ── */
 const STATUSES = ['관심', '신청완료', '서류제출', '당첨', '탈락'];
+const STATUS_CLS = { '관심': 'st-interest', '신청완료': 'st-applied', '서류제출': 'st-docs', '당첨': 'st-won', '탈락': 'st-lost' };
+let myStatusFilter = 'all';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* 상태에 맞는 "다음 일정" — 관심=접수마감, 신청 이후=당첨발표 (예비신혼부부가 궁금한 날짜) */
+function myNext(n, r) {
+  const d = n.dates;
+  if (r.status === '당첨') return { label: '🎉 당첨', date: '9998-01-01' };
+  if (r.status === '탈락') return { label: '종료', date: '9999-01-01' };
+  if ((r.status === '신청완료' || r.status === '서류제출') && d.winner) {
+    return { label: (d.winner >= todayISO ? '발표 ' : '발표일 지남 ') + dday(d.winner), date: d.winner, urgent: d.winner >= todayISO && (new Date(d.winner) - TODAY) / 86400000 <= 7 };
+  }
+  const e = effEnd(n);
+  if (e) return { label: (e >= todayISO ? '마감 ' : '마감됨 ') + dday(e), date: e, urgent: e >= todayISO && (new Date(e) - TODAY) / 86400000 <= 7 };
+  return { label: '', date: '9997-01-01' };
+}
 let my = {};                       // 로그인 시 Supabase에서 채움, 로그아웃 시 비움
 const saveMy = () => updateMyCount();   // 메모리 상태만 (영속화는 Supabase가 담당)
 const updateMyCount = () => {
@@ -893,8 +940,21 @@ const SORT_FNS = {
   notice: (a, b) => (b.dates.notice || '').localeCompare(a.dates.notice || ''),      // 최신 공고순
 };
 
-/* 모바일 공고 리스트: 공고 1건 1행, 진행중/마감 필터 + 정렬 */
+/* 공고 리스트: 일반 모드(진행중/마감+정렬) vs 내 청약 관리 모드(상태칩+스마트 일정) */
 function renderMobileList() {
+  const chips = document.getElementById('myChips');
+  const lf = document.getElementById('listFilter');
+  const ctl = document.getElementById('listCtl');
+
+  if (myOnly) {   // ── 내 청약 관리 모드 ──
+    lf.style.display = 'none'; ctl.style.display = 'none';
+    chips.hidden = false;
+    renderMyChips();
+    renderMyList();
+    return;
+  }
+  chips.hidden = true; lf.style.display = ''; ctl.style.display = '';
+
   const isOpen = n => effEnd(n) && effEnd(n) >= todayISO;
   const items = filtered()
     .filter(n => listMode === 'open' ? isOpen(n) : (effEnd(n) && effEnd(n) < todayISO));
@@ -902,6 +962,76 @@ function renderMobileList() {
   items.sort(listMode === 'open' ? SORT_FNS[sortMode] : SORT_FNS.deadlineDesc);
   document.getElementById('sortSel').style.display = listMode === 'open' ? '' : 'none';
   renderList('mobileList', items, { urgentBadge: listMode === 'open' });
+}
+
+/* 상태 칩 필터 (개수 포함) */
+function renderMyChips() {
+  const el = document.getElementById('myChips');
+  const counts = { all: 0 };
+  STATUSES.forEach(s => counts[s] = 0);
+  DATA.notices.forEach(n => {
+    const r = my[n.id]; if (!r) return;
+    counts.all++; counts[r.status] = (counts[r.status] || 0) + 1;
+  });
+  el.innerHTML = ['all', ...STATUSES].map(s => {
+    const on = myStatusFilter === s ? 'on' : '';
+    const cls = s === 'all' ? '' : `st ${STATUS_CLS[s]}`;
+    const label = s === 'all' ? '전체' : s;
+    return `<button data-s="${s}" class="${on} ${cls}">${label} ${counts[s] || 0}</button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+    myStatusFilter = btn.dataset.s;
+    renderMobileList();
+  });
+}
+
+/* 내 청약 목록: 상태 배지(행 내 변경) + 스마트 일정 + 메모 미리보기 */
+function renderMyList() {
+  const el = document.getElementById('mobileList');
+  const items = DATA.notices
+    .filter(n => my[n.id] && (!region || n.region === region))
+    .filter(n => myStatusFilter === 'all' || my[n.id].status === myStatusFilter)
+    .sort((a, b) => myNext(a, my[a.id]).date.localeCompare(myNext(b, my[b.id]).date));
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty">${myStatusFilter === 'all'
+      ? '공고 목록에서 ☆를 눌러 관심 공고를 담아보세요'
+      : '해당 상태의 공고가 없어요'}</div>`;
+    return;
+  }
+  el.innerHTML = items.map((n, i) => {
+    const r = my[n.id];
+    const s = seriesOf(n);
+    const nx = myNext(n, r);
+    const opts = STATUSES.map(st => `<option ${st === r.status ? 'selected' : ''}>${st}</option>`).join('')
+      + '<option value="__del">목록에서 삭제</option>';
+    return `<div class="due-item" data-i="${i}">
+      <select class="stsel ${STATUS_CLS[r.status] || ''}" data-i="${i}" aria-label="상태 변경">${opts}</select>
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="t"><span class="name">${esc(n.title)}</span>
+      ${r.memo ? `<span class="memoprev">📝 ${esc(r.memo)}</span>` : ''}
+      <span class="when">~ ${effEnd(n) || '-'} 마감 · ${n.source}</span></span>
+      <span class="dday ${nx.urgent ? 'urgent' : ''}">${nx.label}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.due-item').forEach(row =>
+    row.onclick = () => showDetail(items[+row.dataset.i]));
+  el.querySelectorAll('.stsel').forEach(sel => {
+    sel.onclick = e => e.stopPropagation();
+    sel.onchange = e => {
+      e.stopPropagation();
+      const n = items[+sel.dataset.i];
+      if (sel.value === '__del') {
+        if (confirm('이 공고를 내 청약에서 삭제할까요? (메모도 함께 삭제)')) {
+          delete my[n.id]; saveMy(); remoteDelete(n.id);
+        }
+      } else {
+        my[n.id] = { ...my[n.id], status: sel.value, updatedAt: nowISO() };
+        saveMy(); remoteUpsert(n.id);
+      }
+      renderMobileList(); renderStats();
+    };
+  });
 }
 
 document.getElementById('listFilter').addEventListener('click', e => {
@@ -919,7 +1049,8 @@ document.getElementById('myToggle').onclick = e => {
   if (!session) return promptLogin();
   myOnly = !myOnly;
   e.currentTarget.classList.toggle('on', myOnly);
-  refresh();
+  if (myOnly) { myStatusFilter = 'all'; switchView('list'); }   // 내 청약 = 목록 관리 화면으로
+  else refresh();
 };
 
 /* ── 뷰 전환 (캘린더 / 목록 / 지도) ── */
