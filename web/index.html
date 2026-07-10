@@ -242,6 +242,16 @@
   .dday.urgent { background: color-mix(in srgb, var(--critical) 14%, transparent); color: var(--critical); }
   .empty { padding: 20px 8px; text-align: center; color: var(--muted); font-size: 12.5px; }
 
+  /* 모바일 공고 리스트 (진행중/마감 필터) */
+  .mobile-list-card { display: none; }
+  .lfilter { display: flex; gap: 6px; margin-bottom: 14px; }
+  .lfilter button {
+    flex: 1; padding: 9px; border: 1px solid var(--hairline); background: transparent;
+    color: var(--ink-2); border-radius: 10px; font-weight: 700; font-size: 13px;
+    font-family: inherit; cursor: pointer;
+  }
+  .lfilter button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+
   /* ── FullCalendar 리스타일 ─────────────────────────────── */
   #calendar { --fc-border-color: var(--hairline); --fc-page-bg-color: transparent;
               --fc-today-bg-color: color-mix(in srgb, var(--seoul) 5%, transparent); font-size: 12.5px; }
@@ -364,6 +374,9 @@
   @media (max-width: 560px) {
     body { font-size: 13px; }
     .grid { grid-template-columns: minmax(0, 1fr); }  /* 1fr의 min-content 바닥 제거 */
+    /* 모바일: 캘린더·마감임박 패널 숨기고 공고 리스트만 */
+    #cal-view > .card:not(.mobile-list-card) { display: none; }
+    .mobile-list-card { display: block; }
     /* 아이폰 노치/홈바 safe-area */
     header {
       gap: 8px 6px;
@@ -461,6 +474,13 @@
       <h3 style="margin-top:20px">🔄 상시 · 수시 모집</h3>
       <div class="due" id="rollingList"></div>
     </div>
+    <div class="card mobile-list-card" id="mobileListCard">
+      <div class="lfilter" id="listFilter">
+        <button data-f="open" class="on">진행 중</button>
+        <button data-f="closed">마감</button>
+      </div>
+      <div class="due" id="mobileList"></div>
+    </div>
   </div>
 
   <div id="map-view">
@@ -515,6 +535,8 @@ let myOnly = false;
 let newOnly = false;
 let calendar;
 const NATIVE = !!(window.webkit?.messageHandlers?.native);
+const IS_MOBILE = window.matchMedia('(max-width: 560px)').matches;
+let listMode = 'open';   // 모바일 리스트 필터: open(진행중) | closed(마감)
 
 /* ── 테마 (시스템 → 라이트 → 다크 순환, localStorage 저장) ── */
 const THEME_KEY = 'cheongyak-theme';
@@ -739,8 +761,7 @@ function renderEvent(arg) {
 
 function initCalendar() {
   // 모바일에서는 셀이 좁아 제목이 안 보이므로 목록 뷰를 기본으로
-  const isMobile = new URLSearchParams(location.search).has('mobile')
-    || window.matchMedia('(max-width: 560px)').matches;
+  const isMobile = IS_MOBILE;  // 데스크톱 전용 경로 (모바일은 커스텀 리스트 사용)
   calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
     initialView: isMobile ? 'listMonth' : 'dayGridMonth',
     locale: 'ko',
@@ -866,7 +887,9 @@ document.getElementById('regionFilter').addEventListener('click', e => {
   refresh();
 });
 function refresh() {
-  renderStats(); renderDue();
+  renderStats();
+  if (IS_MOBILE) { renderMobileList(); return; }
+  renderDue();
   // 이벤트를 하나씩 addEvent하면 매번 전체 재렌더(160개 ≈ 1.4초).
   // batchRendering으로 묶으면 한 번만 그린다 (≈ 24ms).
   calendar.batchRendering(() => {
@@ -874,6 +897,25 @@ function refresh() {
     buildEvents().forEach(ev => calendar.addEvent(ev));
   });
 }
+
+/* 모바일 공고 리스트: 공고 1건 1행, 진행중/마감 필터 */
+function renderMobileList() {
+  const isOpen = n => effEnd(n) && effEnd(n) >= todayISO;
+  const items = filtered()
+    .filter(n => listMode === 'open' ? isOpen(n) : (effEnd(n) && effEnd(n) < todayISO))
+    .sort((a, b) => {
+      const ea = effEnd(a) || '', eb = effEnd(b) || '';
+      return listMode === 'open' ? ea.localeCompare(eb) : eb.localeCompare(ea);
+    });
+  renderList('mobileList', items, { urgentBadge: listMode === 'open' });
+}
+
+document.getElementById('listFilter').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  listMode = btn.dataset.f;
+  document.querySelectorAll('#listFilter button').forEach(b => b.classList.toggle('on', b === btn));
+  renderMobileList();
+});
 
 document.getElementById('myToggle').onclick = e => {
   myOnly = !myOnly;
@@ -896,7 +938,14 @@ function switchTab(showCal, btn) {
   btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
 }
 
-renderStats(); renderDue(); initCalendar(); updateMyCount(); updateNewCount();
+renderStats(); updateMyCount(); updateNewCount();
+if (IS_MOBILE) {
+  document.getElementById('tabCal').textContent = '목록';
+  renderMobileList();
+} else {
+  renderDue();
+  initCalendar();
+}
 requestAnimationFrame(() => NATIVE && webkit.messageHandlers.native.postMessage({ action: 'rendered' }));
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
