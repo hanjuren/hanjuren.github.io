@@ -3,8 +3,9 @@ name: Deploy to Pages
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '0 21,3 * * *'   # UTC 21:00, 03:00 = KST 06:00, 12:00 (하루 2회)
+  # 개발 중 임시 비활성화 (완성 후 주석 해제 — 하루 2회 자동 수집·배포)
+  # schedule:
+  #   - cron: '0 21,3 * * *'   # UTC 21:00, 03:00 = KST 06:00, 12:00 (하루 2회)
   workflow_dispatch:
 
 permissions:
@@ -21,13 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: 공고 수집 (마이홈 + LH)
-        run: |
-          echo "DATA_GO_KR_KEY=${{ secrets.DATA_GO_KR_KEY }}" > .env
-          python3 collector/collect.py
+      # 개발 중 임시 비활성화 (완성 후 주석 해제 — 배포 시 최신 공고 수집)
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      # - name: 공고 수집 (마이홈 + LH)
+      #   run: |
+      #     echo "DATA_GO_KR_KEY=${{ secrets.DATA_GO_KR_KEY }}" > .env
+      #     python3 collector/collect.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -98,15 +98,16 @@
   .fc-daygrid-day-frame, .fc-daygrid-day-events,
   .fc-daygrid-event-harness, .fc-daygrid-event, .ev { min-width: 0 !important; }
 
-  /* ── 헤더 ──────────────────────────────────────────────── */
+  /* ── 헤더 (1단: 브랜드+계정 / 2단: 필터+뷰탭) ───────────── */
   header {
     position: sticky; top: 0; z-index: 30;
-    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-    padding: 14px 28px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 28px 14px;
     background: color-mix(in srgb, var(--page) 93%, transparent);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--hairline);
   }
+  .hrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand .mark {
     width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
@@ -389,20 +390,22 @@
     #tabCal { display: none; }             /* 폰: 캘린더 탭 숨김 (셀 좁아 부적합) */
     /* 아이폰 노치/홈바 safe-area */
     header {
-      gap: 8px 6px;
-      padding: 10px 12px;
+      gap: 10px;
+      padding: 10px 12px 12px;
       padding-top: max(10px, env(safe-area-inset-top));
     }
     main { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
 
-    .brand { flex: 1 1 100%; }        /* 브랜드는 첫 줄 독점 */
     .brand .mark { width: 26px; height: 26px; font-size: 13px; }
     .brand h1 { font-size: 15px; }
     .brand .sub { font-size: 11px; }
-    .spacer { display: none; }         /* 필터/탭이 자연스럽게 흐르도록 */
     .seg { padding: 2px; }
     .seg button { padding: 7px 11px; font-size: 12px; }  /* 터치 타겟 유지 */
     .theme-btn { width: 32px; height: 32px; }
+    .authbtn { max-width: 120px; padding: 6px 10px; font-size: 12px; }
+    /* 2단: 필터는 왼쪽, 뷰탭은 아래 줄 전체 폭 (목록/지도 반반) */
+    #viewTabs { flex: 1 1 100%; display: flex; }
+    #viewTabs button { flex: 1; }
 
     /* 스탯 타일 압축 */
     .stat { padding: 13px 14px; border-radius: 12px; }
@@ -438,29 +441,34 @@
 </head>
 <body>
 <header>
-  <div class="brand">
-    <div class="mark">🏠</div>
-    <div>
-      <h1>청약 캘린더</h1>
-      <div class="sub">서울 · 경기 공공임대</div>
+  <div class="hrow">
+    <div class="brand">
+      <div class="mark">🏠</div>
+      <div>
+        <h1>청약 캘린더</h1>
+        <div class="sub">서울 · 경기 공공임대</div>
+      </div>
     </div>
+    <div class="spacer"></div>
+    <span class="updated" id="updated"></span>
+    <button id="authBtn" class="authbtn">로그인</button>
+    <button id="themeBtn" class="theme-btn" title="테마 전환"></button>
   </div>
-  <div class="seg" id="regionFilter">
-    <button data-r="" class="on">전체</button>
-    <button data-r="서울특별시">서울</button>
-    <button data-r="경기도">경기</button>
-  </div>
-  <div class="seg">
-    <button id="myToggle">⭐ 내 청약 <span id="myCount" class="cnt"></span></button>
-  </div>
-  <div class="spacer"></div>
-  <span class="updated" id="updated"></span>
-  <button id="authBtn" class="authbtn">로그인</button>
-  <button id="themeBtn" class="theme-btn" title="테마 전환"></button>
-  <div class="seg" id="viewTabs">
-    <button id="tabCal" class="on">캘린더</button>
-    <button id="tabList">목록</button>
-    <button id="tabMap">지도</button>
+  <div class="hrow">
+    <div class="seg" id="regionFilter">
+      <button data-r="" class="on">전체</button>
+      <button data-r="서울특별시">서울</button>
+      <button data-r="경기도">경기</button>
+    </div>
+    <div class="seg">
+      <button id="myToggle">⭐ 내 청약 <span id="myCount" class="cnt"></span></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg" id="viewTabs">
+      <button id="tabCal" class="on">캘린더</button>
+      <button id="tabList">목록</button>
+      <button id="tabMap">지도</button>
+    </div>
   </div>
 </header>
 
@@ -956,7 +964,8 @@ authBtn.onclick = () => {
 
 function updateAuthUI() {
   if (session) {
-    authBtn.textContent = '👤 ' + (session.user.email || '로그인됨');
+    // 이메일은 @ 앞부분만 (좁은 화면 대응)
+    authBtn.textContent = '👤 ' + (session.user.email?.split('@')[0] || '로그인됨');
     authBtn.classList.add('in');
     authBtn.title = '클릭하면 로그아웃';
   } else {
