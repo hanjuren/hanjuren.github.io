@@ -174,6 +174,12 @@
     cursor: pointer; font-family: inherit;
   }
   .status-seg button.on { background: var(--ink); border-color: var(--ink); color: var(--page); }
+  .login-hint {
+    width: 100%; padding: 10px; border: 1px solid var(--hairline); background: transparent;
+    color: var(--ink-2); border-radius: 10px; font-weight: 700; font-size: 13px;
+    font-family: inherit; cursor: pointer;
+  }
+  .login-hint:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
   .my-box { border-top: 1px solid var(--hairline); margin-top: 14px; padding-top: 14px; }
   .my-box .row-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
   .my-box textarea {
@@ -200,9 +206,8 @@
   .stat .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
-  /* 목록 뷰로 통일: 캘린더·마감임박 패널 숨기고 공고 리스트만 (모든 화면) */
-  #cal-view > .card:not(.mobile-list-card) { display: none; }
-  #cal-view { display: block; }
+  /* 뷰 전환: 목록·지도는 기본 숨김, 탭 선택 시 JS가 표시 */
+  #list-view, #map-view { display: none; }
   #mobileListCard { max-width: 760px; margin: 0 auto; }
   .card {
     background: var(--surface); border: 1px solid var(--ring); border-radius: 16px;
@@ -381,6 +386,7 @@
   @media (max-width: 560px) {
     body { font-size: 13px; }
     #mobileListCard { max-width: none; }   /* 폰에선 전체 폭 */
+    #tabCal { display: none; }             /* 폰: 캘린더 탭 숨김 (셀 좁아 부적합) */
     /* 아이폰 노치/홈바 safe-area */
     header {
       gap: 8px 6px;
@@ -451,8 +457,9 @@
   <span class="updated" id="updated"></span>
   <button id="authBtn" class="authbtn">로그인</button>
   <button id="themeBtn" class="theme-btn" title="테마 전환"></button>
-  <div class="seg">
+  <div class="seg" id="viewTabs">
     <button id="tabCal" class="on">캘린더</button>
+    <button id="tabList">목록</button>
     <button id="tabMap">지도</button>
   </div>
 </header>
@@ -476,6 +483,9 @@
       <h3 style="margin-top:20px">🔄 상시 · 수시 모집</h3>
       <div class="due" id="rollingList"></div>
     </div>
+  </div>
+
+  <div id="list-view">
     <div class="card mobile-list-card" id="mobileListCard">
       <div class="lfilter" id="listFilter">
         <button data-f="open" class="on">진행 중</button>
@@ -530,8 +540,8 @@ let region = '';
 let myOnly = false;
 let calendar;
 let session = null;   // Supabase 로그인 세션 (null = 비로그인)
-const IS_MOBILE = true;   // 데스크톱·모바일 모두 목록 뷰로 통일
 const IS_PHONE = window.matchMedia('(max-width: 560px)').matches;
+let currentView = IS_PHONE ? 'list' : 'calendar';   // calendar | list | map (폰은 목록 기본)
 const nowISO = () => new Date().toISOString();
 let listMode = 'open';      // 모바일 리스트 필터: open(진행중) | closed(마감)
 let sortMode = 'deadline';  // 진행중 정렬: deadline | deadlineDesc | notice
@@ -554,18 +564,23 @@ document.getElementById('themeBtn').onclick = () => {
   applyTheme(theme);
 };
 
-/* ── 내 청약 저장소 (localStorage, 공고ID 기준) ── */
-const MY_KEY = 'cheongyak-my-v1';
+/* ── 내 청약 (로그인 시에만, Supabase에만 저장 — 로컬 저장 안 함) ── */
 const STATUSES = ['관심', '신청완료', '서류제출', '당첨', '탈락'];
-const my = JSON.parse(localStorage.getItem(MY_KEY) || '{}');
-const saveMy = () => {
-  localStorage.setItem(MY_KEY, JSON.stringify(my));
-  updateMyCount();
-};
+let my = {};                       // 로그인 시 Supabase에서 채움, 로그아웃 시 비움
+const saveMy = () => updateMyCount();   // 메모리 상태만 (영속화는 Supabase가 담당)
 const updateMyCount = () => {
   const n = Object.keys(my).length;
   document.getElementById('myCount').textContent = n ? `${n}` : '';
 };
+// 로그인 유도 (내 청약 기능은 로그인 필요)
+function promptLogin() {
+  if (confirm('내 청약 기능은 로그인이 필요합니다. 구글로 로그인할까요?')) {
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname },
+    });
+  }
+}
 
 /* ── 마지막 업데이트 표시 (GitHub Actions가 하루 2회 자동 갱신) ── */
 document.getElementById('updated').textContent =
@@ -660,6 +675,7 @@ function renderList(elId, items, { urgentBadge = true } = {}) {
 
 // 즐겨찾기 토글 = '관심' 상태로 등록/해제 (내 청약 저장소 재활용)
 function toggleFav(n) {
+  if (!session) return promptLogin();
   if (my[n.id]) { delete my[n.id]; saveMy(); remoteDelete(n.id); }
   else { my[n.id] = { status: '관심', updatedAt: nowISO() }; saveMy(); remoteUpsert(n.id); }
   refresh();
@@ -729,41 +745,20 @@ function renderEvent(arg) {
 }
 
 function initCalendar() {
-  // 모바일에서는 셀이 좁아 제목이 안 보이므로 목록 뷰를 기본으로
-  const isMobile = IS_MOBILE;  // 데스크톱 전용 경로 (모바일은 커스텀 리스트 사용)
   calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-    initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+    initialView: 'dayGridMonth',
     locale: 'ko',
     height: 'auto',
-    // 모바일: 월간 토글 대신 월 선택 위젯(헤더에 실제 배치), '오늘' 제거. 데스크톱은 기존 유지
-    headerToolbar: isMobile
-      ? { left: 'prev,next', center: 'title', right: 'monthSpacer' }
-      : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
-    customButtons: { monthSpacer: { text: '' } },
-    buttonText: { today: '오늘', month: '월', list: '목록' },
-    datesSet: () => { if (isMobile) mountMonthField(); },
+    headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+    buttonText: { today: '오늘' },
     titleFormat: { year: 'numeric', month: 'long' },
     events: buildEvents(),
     eventContent: renderEvent,
     eventClick: info => showDetail(info.event.extendedProps.notice),
     dayMaxEventRows: 4,
     moreLinkContent: a => `+${a.num}건`,
-    noEventsContent: '이 달에는 표시할 일정이 없어요',
   });
   calendar.render();
-
-  // 날짜 선택 → (필요 시 그 달로 이동한 뒤) 목록에서 해당 날짜 영역으로 스크롤
-  mpick.addEventListener('change', () => {
-    const val = mpick.value;             // YYYY-MM-DD
-    if (!val) return;
-    const target = new Date(val + 'T00:00:00');
-    const cur = calendar.getDate();
-    const sameMonth = target.getFullYear() === cur.getFullYear()
-      && target.getMonth() === cur.getMonth();
-    if (!sameMonth) calendar.gotoDate(val);
-    // gotoDate 후 목록이 다시 그려지므로 다음 프레임에 스크롤
-    requestAnimationFrame(() => setTimeout(() => scrollListToDate(val), 30));
-  });
 }
 
 // 목록에서 해당 날짜(없으면 그 이후 첫 날짜) 그룹으로 스크롤
@@ -823,9 +818,21 @@ function showDetail(n) {
   dlg.showModal();
 }
 
-/* ── 내 청약 관리 (상세 팝업 내) ── */
+/* ── 내 청약 관리 (상세 팝업 내, 로그인 시에만) ── */
 function renderMyBox(n) {
   const box = document.getElementById('dlgStatus');
+  const memo = document.getElementById('dlgMemo');
+
+  if (!session) {   // 비로그인: 로그인 유도
+    box.innerHTML = '<button class="login-hint">🔒 로그인하고 내 청약 관리하기</button>';
+    box.querySelector('.login-hint').onclick = promptLogin;
+    memo.value = ''; memo.disabled = true;
+    memo.placeholder = '로그인하면 메모를 남길 수 있어요';
+    return;
+  }
+  memo.disabled = false;
+  memo.placeholder = '메모 (예: 필요 서류, 순위 조건 확인 등)';
+
   const mine = my[n.id];
   box.innerHTML = STATUSES.map(s =>
     `<button data-s="${s}" class="${mine?.status === s ? 'on' : ''}">${s}</button>`).join('');
@@ -839,7 +846,6 @@ function renderMyBox(n) {
     }
     renderMyBox(n); refresh();
   });
-  const memo = document.getElementById('dlgMemo');
   memo.value = mine?.memo || '';
   memo.oninput = () => {
     if (!my[n.id]) my[n.id] = { status: '관심' };
@@ -860,8 +866,10 @@ document.getElementById('regionFilter').addEventListener('click', e => {
 });
 function refresh() {
   renderStats();
-  if (IS_MOBILE) { renderMobileList(); return; }
+  if (currentView === 'list') { renderMobileList(); return; }
+  if (currentView !== 'calendar') return;   // 지도 뷰는 갱신할 것 없음
   renderDue();
+  if (!calendar) return;
   // 이벤트를 하나씩 addEvent하면 매번 전체 재렌더(160개 ≈ 1.4초).
   // batchRendering으로 묶으면 한 번만 그린다 (≈ 24ms).
   calendar.batchRendering(() => {
@@ -900,29 +908,37 @@ document.getElementById('sortSel').addEventListener('change', e => {
 });
 
 document.getElementById('myToggle').onclick = e => {
+  if (!session) return promptLogin();
   myOnly = !myOnly;
   e.currentTarget.classList.toggle('on', myOnly);
   refresh();
 };
 
-const calView = document.getElementById('cal-view');
-const mapView = document.getElementById('map-view');
-document.getElementById('tabCal').onclick = e => switchTab(true, e.target);
-document.getElementById('tabMap').onclick = e => switchTab(false, e.target);
-function switchTab(showCal, btn) {
-  calView.style.display = showCal ? '' : 'none';
-  mapView.style.display = showCal ? 'none' : '';
-  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+/* ── 뷰 전환 (캘린더 / 목록 / 지도) ── */
+const VIEWS = {
+  calendar: document.getElementById('cal-view'),
+  list: document.getElementById('list-view'),
+  map: document.getElementById('map-view'),
+};
+const TABS = {
+  calendar: document.getElementById('tabCal'),
+  list: document.getElementById('tabList'),
+  map: document.getElementById('tabMap'),
+};
+const VIEW_DISPLAY = { calendar: 'grid', list: 'block', map: 'block' };
+function switchView(view) {
+  currentView = view;
+  Object.entries(VIEWS).forEach(([k, el]) => el.style.display = k === view ? VIEW_DISPLAY[k] : 'none');
+  Object.entries(TABS).forEach(([k, el]) => el.classList.toggle('on', k === view));
+  if (view === 'calendar' && !calendar) initCalendar();   // 캘린더는 처음 열 때 생성
+  refresh();
 }
+document.getElementById('tabCal').onclick = () => switchView('calendar');
+document.getElementById('tabList').onclick = () => switchView('list');
+document.getElementById('tabMap').onclick = () => switchView('map');
 
 renderStats(); updateMyCount();
-if (IS_MOBILE) {
-  document.getElementById('tabCal').textContent = '목록';
-  renderMobileList();
-} else {
-  renderDue();
-  initCalendar();
-}
+switchView(currentView);   // 초기 뷰 (폰=목록, 데스크톱=캘린더)
 
 /* ── Supabase 동기화 (로그인 시 여러 기기에서 내 청약 공유) ── */
 const SUPABASE_URL = 'https://nknxzlrqffoqcbooghvb.supabase.co';
@@ -966,32 +982,14 @@ async function remoteDelete(id) {
   if (error) console.error('delete 실패', error);
 }
 
-// 로그인 시: 원격 데이터를 불러와 로컬과 병합 (각 공고는 updatedAt 최신 우선)
+// 로그인 시: 원격(Supabase)에서 내 청약을 불러온다 (로컬 저장 없음)
 async function syncOnLogin() {
   const { data: rows, error } = await sb.from('my_notices').select('*');
-  if (error) { console.error('동기화 실패', error); return; }
-  const remote = {};
-  (rows || []).forEach(r => remote[r.notice_id] = {
+  if (error) { console.error('불러오기 실패', error); return; }
+  my = {};
+  (rows || []).forEach(r => my[r.notice_id] = {
     status: r.status || '관심', memo: r.memo || '', updatedAt: r.updated_at,
   });
-  const ids = new Set([...Object.keys(my), ...Object.keys(remote)]);
-  const toPush = [];
-  ids.forEach(id => {
-    const l = my[id], r = remote[id];
-    if (l && r) {
-      if (new Date(l.updatedAt || 0) > new Date(r.updatedAt || 0)) toPush.push(id);
-      else my[id] = r;
-    } else if (l) toPush.push(id);   // 로컬에만 있음 → 업로드
-    else my[id] = r;                 // 원격에만 있음 → 로컬로
-  });
-  if (toPush.length) {
-    await sb.from('my_notices').upsert(toPush.map(id => ({
-      user_id: session.user.id, notice_id: id,
-      status: my[id].status || null, memo: my[id].memo || null,
-      updated_at: my[id].updatedAt || nowISO(),
-    })));
-  }
-  localStorage.setItem(MY_KEY, JSON.stringify(my));
   updateMyCount(); refresh();
 }
 
@@ -999,6 +997,11 @@ sb.auth.onAuthStateChange((event, sess) => {
   session = sess;
   updateAuthUI();
   if (event === 'SIGNED_IN') syncOnLogin();
+  else if (event === 'SIGNED_OUT') {   // 로그아웃: 내 청약 비우기
+    my = {}; myOnly = false;
+    document.getElementById('myToggle').classList.remove('on');
+    updateMyCount(); refresh();
+  }
 });
 sb.auth.getSession().then(({ data }) => {
   session = data.session;
